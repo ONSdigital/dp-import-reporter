@@ -11,7 +11,7 @@ build:
 	@mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
 	go build -o $(BUILD_ARCH)/$(BIN_DIR)/dp-import-reporter consumer/main.go
 debug:
-	HUMAN_LOG=1 go run consumer/main.go
+	HUMAN_LOG=1 go run cmd/consumer/main.go
 example:
 	go run cmd/producer/main.go
 
