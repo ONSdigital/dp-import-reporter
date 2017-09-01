@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/ONSdigital/dp-import-reporter/config"
 	"github.com/ONSdigital/dp-import-reporter/handler"
 	"github.com/ONSdigital/dp-import-reporter/schema"
 	"github.com/ONSdigital/go-ns/kafka"
@@ -29,12 +30,7 @@ func TestConsumer(t *testing.T) {
 	// t.Parallel()
 
 	Convey("Set up the variables for test enviroment", t, func() {
-		cfg := config{
-			NewInstanceTopic: "event-reporter",
-			Brokers:          []string{"localhost:9092"},
-			ImportAddr:       "http://localhost:21800",
-			ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
-		}
+		cfg, _ := config.Get()
 		log.Namespace = "dp-event-reporter"
 		msg, _ := schema.ReportedEventSchema.Marshal(&handler.EventReport{
 			InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40476",
@@ -58,7 +54,7 @@ func TestConsumer(t *testing.T) {
 			commitI: 0,
 		}
 
-		go loop(newInstanceEventConsumer, &cfg, client, c)
+		go loop(newInstanceEventConsumer, cfg, client, c)
 		newInstanceEventConsumer.Incoming() <- *kafkaMessege
 
 		//incorrect instance id will throw error.
@@ -80,9 +76,9 @@ func TestConsumer(t *testing.T) {
 }
 func TestInit(t *testing.T) {
 	Convey("Should init the parameters needed for the running of the consumer", t, func() {
-		newKakfaConsumer, cfg, err := consumerInit()
+		cfg, _ := config.Get()
+		newKakfaConsumer, err := consumerInit(cfg)
 		So(newKakfaConsumer, ShouldNotBeNil)
-		So(cfg, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 	})
