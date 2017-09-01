@@ -49,13 +49,14 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 		_, err := c.Get(key)
 		if err != nil {
 			c.Set(key, value, expire)
+		} else {
+			c.Del(key)
 		}
 	}
 
 	got, err := c.Get(key)
 	if err != nil {
 		c.Set(key, value, expire)
-		log.Info("What is the json", log.Data{"json": jsonUpload})
 		err := e.putEvent(httpClient, jsonUpload, cfg, status)
 		if err != nil {
 			return err

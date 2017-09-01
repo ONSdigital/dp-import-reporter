@@ -186,7 +186,7 @@ func TestArraySlicing(t *testing.T) {
 		Convey("It brings back a valid instance", func() {
 			So(err, ShouldBeNil)
 		})
-		var aE = event{
+		var aE = instanceEvent{
 			Type:          "error",
 			Message:       "i am a message",
 			MessageOffset: "1",
