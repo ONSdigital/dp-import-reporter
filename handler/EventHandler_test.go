@@ -17,7 +17,7 @@ var cfg = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
 	ImportAPIURL:     "http://localhost:21800",
-	ImportAuthToken:  "D0108EA-825D-411C-9B1D-41EF7727F465",
+	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
 }
 
@@ -26,7 +26,7 @@ var cfg1 = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
 	ImportAPIURL:     "http://localho:21800",
-	ImportAuthToken:  "D0108EA-825D-411C-9B1D-41EF7727F465",
+	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
 	// ImportAPIURL: "http://localhost:21800",
 }
@@ -91,34 +91,33 @@ func TestCheckInstance(t *testing.T) {
 
 }
 
-// func TestPutJobStatus(t *testing.T) {
-//
-// 	Convey("Internal method which changes the job status ", t, func() {
-// 		cfg3, _ := config.Get()
-//
-// 		err := e.putJobStatus(httpClient, cfg3)
-// 		Convey("A complete working run through of all the code in a positive manner", func() {
-// 			So(err, ShouldBeNil)
-// 		})
-//
-// 		err1 := e.putJobStatus(httpClient, cfg1)
-// 		Convey("A run through with an incomplete url", func() {
-// 			So(err1, ShouldNotBeNil)
-// 		})
-//
-// 		err2 := e.putJobStatus(httpClient, cfg2)
-// 		Convey("A run through without the auth token", func() {
-// 			So(err2, ShouldNotBeNil)
-// 		})
-// 	})
-// }
+func TestPutJobStatus(t *testing.T) {
+
+	Convey("Internal method which changes the job status ", t, func() {
+		cfg3, _ := config.Get()
+
+		err := e.putJobStatus(httpClient, cfg3)
+		Convey("A complete working run through of all the code in a positive manner", func() {
+			So(err, ShouldBeNil)
+		})
+
+		err1 := e.putJobStatus(httpClient, cfg1)
+		Convey("A run through with an incomplete url", func() {
+			So(err1, ShouldNotBeNil)
+		})
+
+		err2 := e.putJobStatus(httpClient, cfg2)
+		Convey("A run through without the auth token", func() {
+			So(err2, ShouldNotBeNil)
+		})
+	})
+}
 func TestPutEvents(t *testing.T) {
 	t.Parallel()
 
 	Convey("internal method which puts the events into that instance", t, func() {
 		json := []byte(`{"type":"` + "error" + `","time":"` + time.Now().String() + `","message":"` + "message" + `","messageOffset":"` + "msgOff" + `"}`)
-		cfg4, _ := config.Get()
-		err := e.putEvent(httpClient, json, cfg4, "")
+		err := e.putEvent(httpClient, json, cfg, "")
 		Convey("A complete run through with a postive response with it being added", func() {
 			So(err, ShouldBeNil)
 		})
@@ -157,6 +156,29 @@ func TestHandleEvents(t *testing.T) {
 		})
 	})
 }
+func TestErrorHandler(t *testing.T) {
+	Convey("Given that a status code is provided", t, func() {
+		Convey("When an http response is sent", func() {
+			Convey("These response should not responde with an error", func() {
+				r := errorhandler(200)
+				So(r, ShouldBeNil)
+				r1 := errorhandler(201)
+				So(r1, ShouldBeNil)
+			})
+			Convey("These response should return errors", func() {
+				r2 := errorhandler(404)
+				So(r2, ShouldNotBeNil)
+				r3 := errorhandler(401)
+				So(r3, ShouldNotBeNil)
+				r4 := errorhandler(400)
+				So(r4, ShouldNotBeNil)
+				r5 := errorhandler(60000)
+				So(r5, ShouldNotBeNil)
+			})
+
+		})
+	})
+}
 
 func TestArraySlicing(t *testing.T) {
 	Convey("A method which slices a events array up", t, func() {
@@ -175,117 +197,3 @@ func TestArraySlicing(t *testing.T) {
 		})
 	})
 }
-
-// func TestCache(t *testing.T) {
-// 	t.Parallel()
-// 	Convey("Checks for eventhandler caching", t, func() {
-// 		cacheSize := 100 * 1024 * 1024
-// 		c := freecache.NewCache(cacheSize)
-// 		debug.SetGCPercent(20)
-//
-// 		key, err := c.Get([]byte("a4695fee-f0a2-49c4-b136-e3ca8dd40476"))
-// 		Convey("There should be no error as its should be added", func() {
-// 			So(err, ShouldNotBeNil)
-// 			So(string(key), ShouldBeBlank)
-// 		})
-// 		c.Set([]byte("a4695fee-f0a2-49c4-b136-e3ca8dd40476"), []byte("value"), 30)
-// 		test, err := c.Get([]byte("a4695fee-f0a2-49c4-b136-e3ca8dd40476"))
-// 		Convey("To see if the instance has been added to the cache", func() {
-// 			So(err, ShouldBeNil)
-// 			So(string(test), ShouldNotBeBlank)
-// 		})
-// 	})
-// }
-//
-// func TestInstanceCheckSuccesful(t *testing.T) {
-//
-// 	t.Parallel()
-// 	Convey("Checks if a instance exists", t, func() {
-// 		instanceID := "a4695fee-f0a2-49c4-b136-e3ca8dd40476"
-// 		r, err := http.Get("http://localhost:21800/instances/" + instanceID)
-// 		So(err, ShouldBeNil)
-// 		So(r.StatusCode, ShouldEqual, http.StatusOK)
-// 	})
-// }
-// func TestInstanceCheckUnsuccesful(t *testing.T) {
-//
-// 	t.Parallel()
-// 	Convey("Checks if a instance exists but will be unsuccesful", t, func() {
-// 		instanceID := "a4695fee-f0a2-49c4-b136-e3ca8dd4047"
-// 		r, err := http.Get("http://localhost:21800/instances/" + instanceID)
-// 		So(err, ShouldBeNil)
-// 		So(r.StatusCode, ShouldEqual, 404)
-// 	})
-// }
-//
-// func TestPutEventSuccessful(t *testing.T) {
-// 	t.Parallel()
-// 	Convey("An event is added to the instance", t, func() {
-// 		jsonUpload := []byte(`{"type":"` + "error" + `","time":"` + "21/6/2015" + `","message":"` + "message" + `","messageOffset":"` + "msgOff" + `"}`)
-//
-// 		r, err := http.NewRequest("PUT", "http://localhost:21800/instances/a4695fee-f0a2-49c4-b136-e3ca8dd40476/events", bytes.NewBuffer(jsonUpload))
-// 		So(err, ShouldBeNil)
-// 		r.Header.Set("Internal-token", "FD0108EA-825D-411C-9B1D-41EF7727F465")
-// 		httpClient := &http.Client{}
-// 		res, err := httpClient.Do(r)
-// 		So(err, ShouldBeNil)
-// 		So(res.StatusCode, ShouldEqual, 201)
-// 	})
-// }
-// func TestPutEventUnsuccessful(t *testing.T) {
-// 	t.Parallel()
-// 	Convey("No token added to the response and then sent to the events endpoint", t, func() {
-// 		jsonUpload := []byte(`{"type":"` + "error" + `","time":"` + "21/6/2015" + `","message":"` + "message" + `","messageOffset":"` + "msgOff" + `"}`)
-//
-// 		r, err := http.NewRequest("PUT", "http://localhost:21800/instances/a4695fee-f0a2-49c4-b136-e3ca8dd40476/events", bytes.NewBuffer(jsonUpload))
-// 		So(err, ShouldBeNil)
-// 		httpClient := &http.Client{}
-// 		res, err := httpClient.Do(r)
-// 		So(err, ShouldBeNil)
-// 		So(res.StatusCode, ShouldEqual, 403)
-// 	})
-//
-// }
-//
-// func TestPutEventUnsuccessfulJSON(t *testing.T) {
-// 	t.Parallel()
-// 	Convey("An invalid JSON response is sent to the events endpoint", t, func() {
-// 		jsonUpload := []byte(`{"type":"` + "error" + `","time":"` + "21/6/2015" + `","messageOffset":"` + "msgOff" + `"}`)
-// 		log.Debug("HHello world", nil)
-// 		r, err := http.NewRequest("PUT", "http://localhost:21800/instances/a4695fee-f0a2-49c4-b136-e3ca8dd40476/events", bytes.NewBuffer(jsonUpload))
-// 		So(err, ShouldBeNil)
-// 		r.Header.Set("Internal-token", "FD0108EA-825D-411C-9B1D-41EF7727F465")
-// 		httpClient := &http.Client{}
-// 		res, err := httpClient.Do(r)
-// 		So(err, ShouldBeNil)
-// 		So(res.StatusCode, ShouldEqual, 400)
-// 	})
-// }
-//
-// func TestPutJobStatusSuccessful(t *testing.T) {
-// 	t.Parallel()
-// 	Convey("A successful change of job status", t, func() {
-// 		jsonUpload := []byte(`{"state":"` + "failed" + `"}`)
-// 		r, err := http.NewRequest("PUT", "http://localhost:21800/instances/a4695fee-f0a2-49c4-b136-e3ca8dd40476", bytes.NewBuffer(jsonUpload))
-// 		So(err, ShouldBeNil)
-// 		r.Header.Set("Internal-token", "FD0108EA-825D-411C-9B1D-41EF7727F465")
-// 		httpClient := &http.Client{}
-// 		res, err := httpClient.Do(r)
-// 		So(err, ShouldBeNil)
-// 		So(res.StatusCode, ShouldEqual, http.StatusOK)
-// 	})
-// }
-//
-// func TestPutJobStatusUnsuccessful(t *testing.T) {
-// 	t.Parallel()
-// 	Convey("A unsuccessful change of job status", t, func() {
-// 		jsonUpload := []byte(`{"state":"` + "failed" + `"}`)
-// 		r, err := http.NewRequest("PUT", "http://localhost:21800/instances/a4695fee-f0a2-49c4-b136-e3ca8dd40476", bytes.NewBuffer(jsonUpload))
-// 		So(err, ShouldBeNil)
-//
-// 		httpClient := &http.Client{}
-// 		res, err := httpClient.Do(r)
-// 		So(err, ShouldBeNil)
-// 		So(res.StatusCode, ShouldNotEqual, http.StatusOK)
-// 	})
-// }

@@ -25,24 +25,26 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 		return err
 	}
 
-	eventTypes := e.EventType
-	timeNow := time.Now().String()
-	message := e.EventMsg
-	msgOff := "0"
-
-	Event := event{
+	instanceEvents := instanceEvent{
 		Type:          e.EventType,
 		Message:       e.EventMsg,
 		MessageOffset: "0",
 	}
 
-	jsonUpload := []byte(`{"type":"` + eventTypes + `","time":"` + timeNow + `","message":"` + message + `","messageOffset":"` + msgOff + `"}`)
+	timeNow := time.Now().String()
+
+	jsonUpload, err := json.Marshal(Event{
+		Type:          e.EventType,
+		Time:          timeNow,
+		Message:       e.EventMsg,
+		MessageOffset: "0",
+	})
 
 	key := []byte(e.InstanceID)
 	value := []byte(e.EventMsg)
 	expire := 25
 
-	check := arraySlicing(Event, *events)
+	check := arraySlicing(instanceEvents, *events)
 	if check {
 		_, err := c.Get(key)
 		if err != nil {
@@ -85,40 +87,30 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 	}
 	log.Info(cfg.ImportAuthToken, nil)
 	//this needs to change but for testing purposes leave it in
-	req.Header.Set("Internal-token", "D0108EA-825D-411C-9B1D-41EF7727F465")
+	req.Header.Set("Internal-token", cfg.ImportAuthToken)
 	res, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
-	// if e.EventType == "error" && status != failed {
-	// 	err := e.putJobStatus(httpClient, cfg)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	defer res.Body.Close()
-	log.Info("here?", log.Data{"instance_id": e.InstanceID})
-
-	if res.StatusCode == 201 {
-		log.Info("Successfully updated events in the import api", log.Data{"instance_id": e.InstanceID})
-		return nil
-	} else if res.StatusCode == 404 {
-		log.Info("Could not find instance", log.Data{"instance_id": e.InstanceID})
-		return errors.New("Could not find instance")
-	} else if res.StatusCode == 401 {
-		log.Info("Unauthorised access", log.Data{"instance_id": e.InstanceID})
-		return errors.New("Unauthorised access")
-	} else if res.StatusCode == 400 {
-		return errors.New("Bad client request received.")
-	} else {
-		return errors.New("Critical error.")
+	if e.EventType == "error" && status != failed {
+		err := e.putJobStatus(httpClient, cfg)
+		if err != nil {
+			return err
+		}
 	}
+	defer res.Body.Close()
+
+	err = errorhandler(res.StatusCode)
+	if err != nil {
+		return err
+	}
+	return nil
 
 }
 
-func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config) (string, *[]event, error) {
+func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config) (string, *[]instanceEvent, error) {
 	path := cfg.ImportAPIURL + "/instances/" + e.InstanceID
-	event := &[]event{}
+	event := &[]instanceEvent{}
 	var URL *url.URL
 
 	URL, err := url.Parse(path)
@@ -141,67 +133,71 @@ func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config)
 	if err := json.Unmarshal(body, &instance); err != nil {
 		return "", event, err
 	}
-	if res.StatusCode == 200 {
-		log.Info("Successfully found instance", log.Data{"instance_id": e.InstanceID})
-		return instance.State, instance.Events, nil
-	} else if res.StatusCode == 404 {
-		return "", event, err
-	} else {
+	err = errorhandler(res.StatusCode)
+	if err != nil {
 		return "", event, err
 	}
+	return instance.State, instance.Events, nil
 }
 
-//This will put a error status in the state
-// func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) error {
-//
-// 	path := cfg.ImportAPIURL + "/instances/" + e.InstanceID
-// 	log.Info("Instance id: "+e.InstanceID, log.Data{"instance_id": e.InstanceID})
-//
-// 	var URL *url.URL
-//
-// 	URL, err := url.Parse(path)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	errorhandle := failed
-// 	jsonUpload, err := json.Marshal(&state{
-// 		state: errorhandle,
-// 	})
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	req, err := http.NewRequest("PUT", URL.String(), bytes.NewBuffer(jsonUpload))
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	req.Header.Set("Internal-token", cfg.ImportAuthToken)
-// 	res, err := httpClient.Do(req)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	defer res.Body.Close()
-// 	if res.StatusCode == 200 {
-// 		log.Info("Successfully updated job state in the import ap", log.Data{"instance_id": e.InstanceID})
-// 		return nil
-// 	} else if res.StatusCode == 404 {
-// 		log.Info("Could not find instance", log.Data{"instance_id": e.InstanceID})
-// 		return errors.New("Could not find instance")
-// 	} else if res.StatusCode == 403 {
-// 		log.Info("Unauthorised access", log.Data{"instance_id": e.InstanceID})
-// 		return errors.New("Unauthorised access")
-// 	} else if res.StatusCode == 400 {
-// 		log.Info("Bad client request", nil)
-// 		return errors.New("JSON was incorrect")
-// 	} else {
-// 		return errors.New("CRITICAL ERROR.")
-// 	}
-//
-// }
+// This will put a error status in the state
+func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) error {
 
-func arraySlicing(a event, event []event) bool {
+	path := cfg.ImportAPIURL + "/instances/" + e.InstanceID
+	log.Info("Instance id: "+e.InstanceID, log.Data{"instance_id": e.InstanceID})
+
+	var URL *url.URL
+
+	URL, err := url.Parse(path)
+	if err != nil {
+		return err
+	}
+	errorhandle := failed
+	jsonUpload, err := json.Marshal(&State{
+		State: errorhandle,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("PUT", URL.String(), bytes.NewBuffer(jsonUpload))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Internal-token", cfg.ImportAuthToken)
+	res, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	err = errorhandler(res.StatusCode)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func errorhandler(statusCode int) error {
+	if statusCode == 200 || statusCode == 201 {
+		log.Info("Successfully updated Event state in the import api", log.Data{"Status code": statusCode})
+		return nil
+	} else if statusCode == 404 {
+		log.Info("Could not find instance", log.Data{"Status code": statusCode})
+		return errors.New("Could not find instance")
+	} else if statusCode == 401 {
+		log.Info("Unauthorised access", log.Data{"Status code": statusCode})
+		return errors.New("Unauthorised access")
+	} else if statusCode == 400 {
+		log.Info("Bad client request", log.Data{"Status code": statusCode})
+		return errors.New("JSON was incorrect")
+	} else {
+		log.Info("Unrecoginsed error", log.Data{"Status code": statusCode})
+		return errors.New("Unrecoginsed error.")
+	}
+}
+func arraySlicing(a instanceEvent, event []instanceEvent) bool {
 	for _, b := range event {
 		// fmt.Println(b)
 		if b == a {

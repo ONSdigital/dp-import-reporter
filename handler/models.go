@@ -8,18 +8,24 @@ type EventReport struct {
 }
 
 type Instance struct {
-	InstanceID                string   `json:"instance_id"`
-	NumberOfObservations      int64    `json:"total_observations"`
-	TotalInsertedObservations int64    `json:"total_inserted_observations,omitempty"`
-	State                     string   `json:"state"`
-	Events                    *[]event `json:"events, omitempty"`
+	InstanceID                string           `json:"instance_id"`
+	NumberOfObservations      int64            `json:"total_observations"`
+	TotalInsertedObservations int64            `json:"total_inserted_observations,omitempty"`
+	State                     string           `json:"state"`
+	Events                    *[]instanceEvent `json:"events, omitempty"`
 }
 
-type event struct {
+type instanceEvent struct {
 	Type          string `json:"type"`
 	Message       string `json:"message"`
 	MessageOffset string `json:"messageOffset"`
 }
-type state struct {
-	state string `json:"state"`
+type Event struct {
+	Type          string `json:"type"`
+	Message       string `json:"message"`
+	Time          string `json:"time"`
+	MessageOffset string `json:"messageOffset"`
+}
+type State struct {
+	State string `json:"state"`
 }

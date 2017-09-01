@@ -20,7 +20,7 @@ func Get() (*Config, error) {
 		NewInstanceTopic: "event-reporter",
 		Brokers:          []string{"localhost:9092"},
 		ImportAPIURL:     "http://localhost:21800",
-		ImportAuthToken:  "D0108EA-825D-411C-9B1D-41EF7727F465",
+		ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:      ":22200",
 	}
 	if err := gofigure.Gofigure(cfg); err != nil {
