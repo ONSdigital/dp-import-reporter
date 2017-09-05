@@ -8,6 +8,7 @@ type Config struct {
 	ImportAPIURL     string   `env:"IMPORT_API_URL" flag:"import-addr" flagDesc:"The address of Import API"`
 	ImportAuthToken  string   `env:"IMPORT_AUTH_TOKEN" flag:"import-auth-token" flagDesc:"Authentication token for access to import API"`
 	BindAddress      string   `env:"BIND_ADDR" flag:"bind-addr" flagDesc:"The bind port"`
+	CacheSize        int      `env:"CACHE_SIZE" flag:"CACHE_SIZE" flagDesc:"The bind port"`
 }
 
 var cfg *Config
@@ -22,6 +23,7 @@ func Get() (*Config, error) {
 		ImportAPIURL:     "http://localhost:21800",
 		ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:      ":22200",
+		CacheSize:        100 * 1024 * 1024,
 	}
 	if err := gofigure.Gofigure(cfg); err != nil {
 		return cfg, err

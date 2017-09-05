@@ -22,7 +22,7 @@ var cfg = &config.Config{
 }
 
 //wrong ImportAPI
-var cfg1 = &config.Config{
+var cfgBadURL = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
 	ImportAPIURL:     "http://localho:21800",
@@ -32,7 +32,7 @@ var cfg1 = &config.Config{
 }
 
 //wrong auth token
-var cfg2 = &config.Config{
+var cfgBadAuth = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
 	ImportAPIURL:     "http://localhost:21800",
@@ -42,24 +42,24 @@ var cfg2 = &config.Config{
 
 //correct
 var e = EventReport{
-	InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40476",
+	InstanceID: "a4695fee-f0a2-49c4-b136-eWithRandomMsgca8dd40476",
 	EventType:  "error",
 	EventMsg:   "Broken on something.",
 }
 
 //wrong instance
-var e1 = EventReport{
-	InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40612",
+var eWrongInstance = EventReport{
+	InstanceID: "a4695fee-f0a2-49c4-b136-eWithRandomMsgca8dd40612",
 	EventType:  "error",
 	EventMsg:   "Broken on something.",
 }
-var e2 = EventReport{
-	InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40612",
+var eWrongInstanceMsg = EventReport{
+	InstanceID: "a4695fee-f0a2-49c4-b136-eWithRandomMsgca8dd40612",
 	EventType:  "error",
 	EventMsg:   "Broken on ",
 }
-var e3 = EventReport{
-	InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40476",
+var eWithRandomMsg = EventReport{
+	InstanceID: "a4695fee-f0a2-49c4-b136-eWithRandomMsgca8dd40476",
 	EventType:  "error",
 	EventMsg:   "Broken on something." + string(rand.Int()),
 }
@@ -69,7 +69,7 @@ func TestCheckInstance(t *testing.T) {
 
 	Convey("Internal method which checks if the instance exists and returns the status and events ", t, func() {
 
-		_, _, err := e.checkInstance(httpClient, cfg1)
+		_, _, err := e.checkInstance(httpClient, cfgBadURL)
 		Convey("URL should not parse", func() {
 			So(err, ShouldNotBeNil)
 		})
@@ -81,10 +81,10 @@ func TestCheckInstance(t *testing.T) {
 			So(events, ShouldNotBeNil)
 		})
 
-		state1, events1, err := e1.checkInstance(httpClient, cfg1)
+		stateWrongInstance, events1, err := eWrongInstance.checkInstance(httpClient, cfgBadURL)
 		Convey("Complete run through with incorrect instanceID", func() {
 			So(err, ShouldNotBeNil)
-			So(state1, ShouldEqual, "")
+			So(stateWrongInstance, ShouldEqual, "")
 			So(events1, ShouldNotBeNil)
 		})
 	})
@@ -101,12 +101,12 @@ func TestPutJobStatus(t *testing.T) {
 			So(err, ShouldBeNil)
 		})
 
-		err1 := e.putJobStatus(httpClient, cfg1)
+		err1 := e.putJobStatus(httpClient, cfgBadURL)
 		Convey("A run through with an incomplete url", func() {
 			So(err1, ShouldNotBeNil)
 		})
 
-		err2 := e.putJobStatus(httpClient, cfg2)
+		err2 := e.putJobStatus(httpClient, cfgBadAuth)
 		Convey("A run through without the auth token", func() {
 			So(err2, ShouldNotBeNil)
 		})
@@ -121,19 +121,14 @@ func TestPutEvents(t *testing.T) {
 		Convey("A complete run through with a postive response with it being added", func() {
 			So(err, ShouldBeNil)
 		})
-		err1 := e.putEvent(httpClient, json, cfg2, "")
+		err1 := e.putEvent(httpClient, json, cfgBadAuth, "")
 		Convey("Should through a status code error as it doesnt have authorisation", func() {
 			So(err1, ShouldNotBeNil)
 		})
-		err2 := e.putEvent(httpClient, json, cfg1, "")
+		err2 := e.putEvent(httpClient, json, cfgBadURL, "")
 		Convey("Should throw an error when trying to request the the put job status within the putevent method", func() {
 			So(err2, ShouldNotBeNil)
 		})
-
-		// err3 := e1.putEvent(httpClient, json, cfg, "")
-		// Convey("Should throw an error when trying to request the the put job status within the putevent method", func() {
-		// 	So(err3, ShouldNotBeNil)
-		// })
 	})
 }
 func TestHandleEvents(t *testing.T) {
@@ -146,11 +141,11 @@ func TestHandleEvents(t *testing.T) {
 		Convey("Complete run through", func() {
 			So(err, ShouldBeNil)
 		})
-		err1 := e1.HandleEvent(httpClient, c, cfg)
+		err1 := eWrongInstance.HandleEvent(httpClient, c, cfg)
 		Convey("Pass through an incorrect instance ID", func() {
 			So(err1, ShouldNotBeNil)
 		})
-		err2 := e3.HandleEvent(httpClient, c, cfg)
+		err2 := eWithRandomMsg.HandleEvent(httpClient, c, cfg)
 		Convey("Should add the event to the events log ", func() {
 			So(err2, ShouldBeNil)
 		})

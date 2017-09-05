@@ -47,7 +47,7 @@ func TestConsumer(t *testing.T) {
 		})
 		client := &http.Client{}
 
-		c := cacheSetup()
+		c := cacheSetup(cfg)
 
 		kafkaMessege := &kafkaMsg{
 			myBytes: msg,

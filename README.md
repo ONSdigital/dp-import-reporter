@@ -14,6 +14,8 @@ dp-repo-template
 | KAFKA_ADDR           | "http://localhost:9092"                | The address of the kafka Instance
 | IMPORT_API_URL       | "http://localhost:21800"               | The URL of the import API
 | IMPORT_AUTH_TOKEN    | "D0108EA-825D-411C-9B1D-41EF7727F465"  | The Auth token for the import api
+| CACHE_SIZE           | "100 * 1024 * 1024"                    | The Cache size
+
 
 
 ### Contributing

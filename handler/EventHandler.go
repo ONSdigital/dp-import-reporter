@@ -15,7 +15,7 @@ import (
 	"github.com/coocood/freecache"
 )
 
-var failed = "failed"
+const failed = "failed"
 
 //main function that triggers everything else
 func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, cfg *config.Config) error {
@@ -60,13 +60,11 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 		err := e.putEvent(httpClient, jsonUpload, cfg, status)
 		if err != nil {
 			return err
-		} else {
-			return nil
 		}
-	} else {
-		log.Info("This instance is saved inmemory already.", log.Data{e.InstanceID: "this instance is saved inmemory", "lock": got})
 		return nil
 	}
+	log.Info("This instance is saved inmemory already.", log.Data{e.InstanceID: "this instance is saved inmemory", "lock": got})
+	return nil
 }
 
 /*this puts an event into the database under the instance you chose
@@ -87,7 +85,7 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 		return err
 	}
 	log.Info(cfg.ImportAuthToken, nil)
-	//this needs to change but for testing purposes leave it in
+
 	req.Header.Set("Internal-token", cfg.ImportAuthToken)
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -110,6 +108,7 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 }
 
 func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config) (string, *[]instanceEvent, error) {
+	log.Info("Checking instance avaiable:", log.Data{"Instance_ID": e.InstanceID})
 	path := cfg.ImportAPIURL + "/instances/" + e.InstanceID
 	event := &[]instanceEvent{}
 	var URL *url.URL
@@ -120,19 +119,19 @@ func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config)
 	}
 	res, err := http.Get(URL.String())
 	if err != nil {
-		return "", event, err
+		return "", event, errors.New("Invalid instance ID")
 	}
 
 	defer res.Body.Close()
 
 	var instance Instance
-	// json := json.NewDecoder(res.Body).Decode(&Instance{})
+
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return "", event, err
 	}
 	if err := json.Unmarshal(body, &instance); err != nil {
-		return "", event, err
+		return "", event, errors.New("Unable to decode JSON response")
 	}
 	err = errorhandler(res.StatusCode)
 	if err != nil {
@@ -153,9 +152,8 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 	if err != nil {
 		return err
 	}
-	errorhandle := failed
 	jsonUpload, err := json.Marshal(&State{
-		State: errorhandle,
+		State: failed,
 	})
 	if err != nil {
 		return err
@@ -181,26 +179,27 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 	return nil
 }
 func errorhandler(statusCode int) error {
-	if statusCode == 200 || statusCode == 201 {
-		log.Info("Successfully updated Event state in the import api", log.Data{"Status code": statusCode})
+	switch statusCode {
+	case 200, 201:
+		log.Info("Successfully connection", log.Data{"Status code": statusCode})
 		return nil
-	} else if statusCode == 404 {
-		log.Info("Could not find instance", log.Data{"Status code": statusCode})
-		return errors.New("Could not find instance")
-	} else if statusCode == 401 {
-		log.Info("Unauthorised access", log.Data{"Status code": statusCode})
-		return errors.New("Unauthorised access")
-	} else if statusCode == 400 {
+	case 400:
 		log.Info("Bad client request", log.Data{"Status code": statusCode})
 		return errors.New("JSON was incorrect")
-	} else {
+	case 401:
+		log.Info("Unauthorised access", log.Data{"Status code": statusCode})
+		return errors.New("Unauthorised access")
+	case 404:
+		log.Info("Could not find instance", log.Data{"Status code": statusCode})
+		return errors.New("Could not find instance")
+	default:
 		log.Info("Unrecoginsed error", log.Data{"Status code": statusCode})
-		return errors.New("Unrecoginsed error.")
+		return errors.New("Unrecoginsed error")
 	}
 }
+
 func arraySlicing(a instanceEvent, event []instanceEvent) bool {
 	for _, b := range event {
-		// fmt.Println(b)
 		if b == a {
 			return true
 		}

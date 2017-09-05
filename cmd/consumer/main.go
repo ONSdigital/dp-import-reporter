@@ -15,20 +15,19 @@ import (
 	"github.com/coocood/freecache"
 )
 
-// var running bool
-
 // logFatal is a utility method for a common failure pattern in main()
 func logFatal(context string, err error, data log.Data) {
 	log.ErrorC(context, err, data)
-	panic(err)
+	os.Exit(1)
 }
 
 func main() {
 
+	log.Namespace = "dp-event-reporter"
+
 	cfg, err := config.Get()
 	if err != nil {
-		log.Error(err, nil)
-		os.Exit(1)
+		logFatal("Config was not configured correctly: ", err, nil)
 	}
 
 	newInstanceEventConsumer, err := consumerInit(cfg)
@@ -36,29 +35,27 @@ func main() {
 		logFatal("error initiating", err, nil)
 	}
 	//cache init
-	c := cacheSetup()
+	c := cacheSetup(cfg)
 	client := &http.Client{}
 
 	loop(newInstanceEventConsumer, cfg, client, c)
 }
 
 func consumerInit(cfg *config.Config) (*kafka.ConsumerGroup, error) {
-	log.Namespace = "dp-event-reporter"
 
 	log.Info("starting", log.Data{
 		"new-import-topic": cfg.NewInstanceTopic,
 		"import-api":       cfg.ImportAPIURL,
 	})
-	newInstanceEventConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
+	consumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
 	if err != nil {
 		logFatal("could not obtain consumer", err, nil)
 	}
-	return newInstanceEventConsumer, err
+	return consumer, err
 }
 
-func cacheSetup() *freecache.Cache {
-	cacheSize := 100 * 1024 * 1024
-	c := freecache.NewCache(cacheSize)
+func cacheSetup(cfg *config.Config) *freecache.Cache {
+	c := freecache.NewCache(cfg.CacheSize)
 	debug.SetGCPercent(20)
 	return c
 }
@@ -67,7 +64,6 @@ func loop(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, cli
 	running := true
 	errorChannel := make(chan bool)
 	go func() {
-
 		for running {
 			select {
 			case newInstanceMessage := <-newInstanceEventConsumer.Incoming():
@@ -95,6 +91,6 @@ func loop(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, cli
 	<-errorChannel
 	// assert: only get here when we have an error, which has been logged
 	newInstanceEventConsumer.Closer() <- true
-	logFatal("", errors.New("aborting after error"), nil)
+	logFatal("gracefully shutting down application...", errors.New("Aborting application, gracfully shutting down"), nil)
 
 }
