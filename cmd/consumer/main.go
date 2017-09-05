@@ -38,7 +38,7 @@ func main() {
 	c := cacheSetup(cfg)
 	client := &http.Client{}
 
-	loop(newInstanceEventConsumer, cfg, client, c)
+	consume(newInstanceEventConsumer, cfg, client, c)
 }
 
 func consumerInit(cfg *config.Config) (*kafka.ConsumerGroup, error) {
@@ -60,7 +60,7 @@ func cacheSetup(cfg *config.Config) *freecache.Cache {
 	return c
 }
 
-func loop(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, client *http.Client, c *freecache.Cache) {
+func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, client *http.Client, c *freecache.Cache) {
 	running := true
 	errorChannel := make(chan bool)
 	go func() {
@@ -73,16 +73,16 @@ func loop(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, cli
 					// Fatal error reading message, should never fall in here
 					continue
 				}
-				log.Info("This data has come through", log.Data{"eventmsg": &msg})
 
 				if err := msg.HandleEvent(client, c, cfg); err != nil {
 					log.ErrorC("Failure updating events", err, log.Data{"topic": cfg.NewInstanceTopic})
+					continue
 				}
 
 				newInstanceMessage.Commit()
 
 			case newImportConsumerErrorMessage := <-newInstanceEventConsumer.Errors():
-				log.Error(errors.New("Event handler has stopped working."), log.Data{"error": newImportConsumerErrorMessage, "topic": cfg.NewInstanceTopic})
+				log.Error(errors.New("consumer recieved error: "), log.Data{"error": newImportConsumerErrorMessage, "topic": cfg.NewInstanceTopic})
 				running = false
 				errorChannel <- true
 			}

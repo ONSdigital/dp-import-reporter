@@ -7,6 +7,7 @@ type EventReport struct {
 	EventMsg   string `avro:"event_message"`
 }
 
+//Instance provides a struct for all the instance information
 type Instance struct {
 	InstanceID                string           `json:"instance_id"`
 	NumberOfObservations      int64            `json:"total_observations"`
@@ -15,17 +16,22 @@ type Instance struct {
 	Events                    *[]instanceEvent `json:"events, omitempty"`
 }
 
+//I have removed the time from this instanceEvent making event checks easier
 type instanceEvent struct {
 	Type          string `json:"type"`
 	Message       string `json:"message"`
 	MessageOffset string `json:"messageOffset"`
 }
+
+//Event struct including the time
 type Event struct {
 	Type          string `json:"type"`
 	Message       string `json:"message"`
 	Time          string `json:"time"`
 	MessageOffset string `json:"messageOffset"`
 }
+
+//State struct is for assigning the state of the instance
 type State struct {
 	State string `json:"state"`
 }

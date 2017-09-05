@@ -28,7 +28,6 @@ func (k kafkaMsg) Commit() {
 
 func TestConsumer(t *testing.T) {
 	// t.Parallel()
-
 	Convey("Set up the variables for test enviroment", t, func() {
 		cfg, _ := config.Get()
 		log.Namespace = "dp-event-reporter"
@@ -54,7 +53,7 @@ func TestConsumer(t *testing.T) {
 			commitI: 0,
 		}
 
-		go loop(newInstanceEventConsumer, cfg, client, c)
+		go consume(newInstanceEventConsumer, cfg, client, c)
 		newInstanceEventConsumer.Incoming() <- *kafkaMessege
 
 		//incorrect instance id will throw error.
