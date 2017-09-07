@@ -45,7 +45,7 @@ func consumerInit(cfg *config.Config) (*kafka.ConsumerGroup, error) {
 
 	log.Info("starting", log.Data{
 		"new-import-topic": cfg.NewInstanceTopic,
-		"import-api":       cfg.ImportAPIURL,
+		"import-api":       cfg.DatasetAPIURL,
 	})
 	consumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
 	if err != nil {

@@ -72,7 +72,7 @@ it does some checks to make sure the instance exists and checks the status
 if the status isn't already failed it will turn that instance to failed */
 func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config.Config, status string) error {
 
-	path := cfg.ImportAPIURL + "/instances/" + e.InstanceID + "/events"
+	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID + "/events"
 
 	var URL *url.URL
 	URL, err := url.Parse(path)
@@ -109,7 +109,7 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 
 func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config) (string, *[]instanceEvent, error) {
 	log.Info("Checking instance avaiable:", log.Data{"Instance_ID": e.InstanceID})
-	path := cfg.ImportAPIURL + "/instances/" + e.InstanceID
+	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
 	event := &[]instanceEvent{}
 	var URL *url.URL
 
@@ -143,7 +143,7 @@ func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config)
 // This will put a error status in the state
 func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) error {
 
-	path := cfg.ImportAPIURL + "/instances/" + e.InstanceID
+	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
 	log.Info("Instance id: "+e.InstanceID, log.Data{"instance_id": e.InstanceID})
 
 	var URL *url.URL

@@ -17,26 +17,26 @@ import (
 var cfg = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	ImportAPIURL:     "http://localhost:21800",
+	DatasetAPIURL:     "http://localhost:21800",
 	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
 }
 
-//wrong ImportAPI
+//wrong DatasetAPI
 var cfgBadURL = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	ImportAPIURL:     "http://localho:21800",
+	DatasetAPIURL:     "http://localho:21800",
 	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
-	// ImportAPIURL: "http://localhost:21800",
+	// DatasetAPIURL: "http://localhost:21800",
 }
 
 //wrong auth token
 var cfgBadAuth = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	ImportAPIURL:     "http://localhost:21800",
+	DatasetAPIURL:     "http://localhost:21800",
 	ImportAuthToken:  "D0108EA-825D-411C-9B12-41EF7727F465",
 	BindAddress:      ":22200",
 }

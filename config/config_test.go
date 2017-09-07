@@ -18,7 +18,7 @@ func TestConfig(t *testing.T) {
 			Convey("Config variables should match those of the enviroment", func() {
 				So(cfg.NewInstanceTopic, ShouldEqual, "event-reporter")
 				So(cfg.Brokers, ShouldResemble, []string{"localhost:9092"})
-				So(cfg.ImportAPIURL, ShouldEqual, "http://localhost:21800")
+				So(cfg.DatasetAPIURL, ShouldEqual, "http://localhost:22000")
 				So(cfg.ImportAuthToken, ShouldEqual, "FD0108EA-825D-411C-9B1D-41EF7727F465")
 				So(cfg.BindAddress, ShouldEqual, ":22200")
 			})
