@@ -13,7 +13,7 @@ type Instance struct {
 	NumberOfObservations      int64            `json:"total_observations"`
 	TotalInsertedObservations int64            `json:"total_inserted_observations,omitempty"`
 	State                     string           `json:"state"`
-	Events                    *[]instanceEvent `json:"events, omitempty"`
+	Events                    []*instanceEvent `json:"events, omitempty"`
 }
 
 //I have removed the time from this instanceEvent making event checks easier

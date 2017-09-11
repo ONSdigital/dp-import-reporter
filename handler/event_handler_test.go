@@ -17,7 +17,7 @@ import (
 var cfg = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	DatasetAPIURL:     "http://localhost:21800",
+	DatasetAPIURL:    "http://localhost:21800",
 	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
 }
@@ -26,7 +26,7 @@ var cfg = &config.Config{
 var cfgBadURL = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	DatasetAPIURL:     "http://localho:21800",
+	DatasetAPIURL:    "http://localho:21800",
 	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
 	// DatasetAPIURL: "http://localhost:21800",
@@ -36,7 +36,7 @@ var cfgBadURL = &config.Config{
 var cfgBadAuth = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	DatasetAPIURL:     "http://localhost:21800",
+	DatasetAPIURL:    "http://localhost:21800",
 	ImportAuthToken:  "D0108EA-825D-411C-9B12-41EF7727F465",
 	BindAddress:      ":22200",
 }
@@ -202,12 +202,12 @@ func TestArraySlicing(t *testing.T) {
 		Convey("It brings back a valid instance", func() {
 			So(err, ShouldBeNil)
 		})
-		var aE = instanceEvent{
+		var aE = &instanceEvent{
 			Type:          "error",
 			Message:       "i am a message",
 			MessageOffset: "1",
 		}
-		array := arraySlicing(aE, *events)
+		array := arraySlicing(aE, events)
 		Convey("Returns false because this event doesn't exist", func() {
 			So(array, ShouldBeFalse)
 		})
