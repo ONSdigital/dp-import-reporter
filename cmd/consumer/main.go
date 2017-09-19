@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
 
@@ -36,9 +40,10 @@ func main() {
 	}
 	//cache init
 	c := cacheSetup(cfg)
-	client := &http.Client{}
 
+	client := &http.Client{}
 	consume(newInstanceEventConsumer, cfg, client, c)
+
 }
 
 func consumerInit(cfg *config.Config) (*kafka.ConsumerGroup, error) {
@@ -63,6 +68,8 @@ func cacheSetup(cfg *config.Config) *freecache.Cache {
 func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, client *http.Client, c *freecache.Cache) {
 	running := true
 	errorChannel := make(chan bool)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for running {
 			select {
@@ -82,12 +89,33 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, 
 				log.Error(errors.New("consumer recieved error: "), log.Data{"error": newImportConsumerErrorMessage, "topic": cfg.NewInstanceTopic})
 				running = false
 				errorChannel <- true
+			case err := <-errorChannel:
+				fmt.Println(err)
+				log.ErrorC("Error channel..", errors.New("unrecoverable error: Need to shutdown"), nil)
+				shutdownGracefully(newInstanceEventConsumer, cfg)
+			case <-signals:
+				log.ErrorC("Signal was sent to application", errors.New("signal passed to application"), nil)
+				shutdownGracefully(newInstanceEventConsumer, cfg)
 			}
 		}
 	}()
 	<-errorChannel
-	// assert: only get here when we have an error, which has been logged
-	newInstanceEventConsumer.Closer() <- true
-	logFatal("gracefully shutting down application...", errors.New("Aborting application, gracfully shutting down"), nil)
 
+	// assert: only get here when we have an error, which has been logged
+	// newInstanceEventConsumer.Closer() <- true
+	// logFatal("gracefully shutting down application...", errors.New("Aborting application, gracfully shutting down"), nil)
+
+}
+
+func shutdownGracefully(consumer *kafka.ConsumerGroup, cfg *config.Config) {
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
+	err := consumer.Close(ctx)
+	if err != nil {
+		log.Error(err, nil)
+	}
+
+	cancel()
+	log.Info("Gracefully shutting down application...", nil)
+
+	os.Exit(1)
 }
