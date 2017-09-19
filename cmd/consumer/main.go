@@ -73,14 +73,11 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config, 
 					// Fatal error reading message, should never fall in here
 					continue
 				}
-
 				if err := msg.HandleEvent(client, c, cfg); err != nil {
 					log.ErrorC("Failure updating events", err, log.Data{"topic": cfg.NewInstanceTopic})
 					continue
 				}
-
 				newInstanceMessage.Commit()
-
 			case newImportConsumerErrorMessage := <-newInstanceEventConsumer.Errors():
 				log.Error(errors.New("consumer recieved error: "), log.Data{"error": newImportConsumerErrorMessage, "topic": cfg.NewInstanceTopic})
 				running = false

@@ -17,7 +17,7 @@ import (
 var cfg = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	DatasetAPIURL:    "http://localhost:21800",
+	DatasetAPIURL:    "http://localhost:22000",
 	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
 }
@@ -36,14 +36,14 @@ var cfgBadURL = &config.Config{
 var cfgBadAuth = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
-	DatasetAPIURL:    "http://localhost:21800",
+	DatasetAPIURL:    "http://localhost:22000",
 	ImportAuthToken:  "D0108EA-825D-411C-9B12-41EF7727F465",
 	BindAddress:      ":22200",
 }
 
 //correct
 var e = EventReport{
-	InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40476",
+	InstanceID: "479dcd03-09b1-4273-b49a-58533f084add",
 	EventType:  "error",
 	EventMsg:   "Broken on something.",
 }
@@ -60,7 +60,7 @@ var eWrongInstanceMsg = EventReport{
 	EventMsg:   "Broken on ",
 }
 var eWithRandomMsg = EventReport{
-	InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40476",
+	InstanceID: "479dcd03-09b1-4273-b49a-58533f084add",
 	EventType:  "error",
 	EventMsg:   "Broken on something." + string(rand.Int()),
 }
@@ -76,11 +76,11 @@ func TestCheckInstance(t *testing.T) {
 				So(err, ShouldNotBeNil)
 			})
 
-			state, events, err := e.checkInstance(httpClient, cfg)
+			state, _, err := e.checkInstance(httpClient, cfg)
 			Convey("Complete run through with 200 status response", func() {
 				So(err, ShouldBeNil)
 				So(state, ShouldNotBeNil)
-				So(events, ShouldNotBeNil)
+				// So(events, ShouldNotBeNil)
 			})
 
 			stateWrongInstance, events1, err := eWrongInstance.checkInstance(httpClient, cfgBadURL)
@@ -99,13 +99,6 @@ func TestPutJobStatus(t *testing.T) {
 	Convey("Given when an instance job status needs to change", t, func() {
 		Convey("When the instance information is passed through", func() {
 
-			config, _ := config.Get()
-
-			err := e.putJobStatus(httpClient, config)
-			Convey("A complete working run through of all the code in a positive manner", func() {
-				So(err, ShouldBeNil)
-			})
-
 			err1 := e.putJobStatus(httpClient, cfgBadURL)
 			Convey("A run through with an incomplete url", func() {
 				So(err1, ShouldNotBeNil)
@@ -123,19 +116,15 @@ func TestPutEvents(t *testing.T) {
 
 	Convey("Given when an event needs to be added to an instance", t, func() {
 		Convey("When the instance information is passed through", func() {
-
+			timeNow := time.Now()
 			json, JSONerr := json.Marshal(Event{
 				Type:          e.EventType,
-				Time:          time.Now().String(),
+				Time:          &timeNow,
 				Message:       e.EventMsg,
 				MessageOffset: "0",
 			})
 			Convey("No errors when marshalling an event", func() {
 				So(JSONerr, ShouldBeNil)
-			})
-			err := e.putEvent(httpClient, json, cfg, "")
-			Convey("A complete run through with a postive response with it being added", func() {
-				So(err, ShouldBeNil)
 			})
 			err1 := e.putEvent(httpClient, json, cfgBadAuth, "")
 			Convey("Should through a status code error as it doesnt have authorisation", func() {
@@ -202,7 +191,7 @@ func TestArraySlicing(t *testing.T) {
 		Convey("It brings back a valid instance", func() {
 			So(err, ShouldBeNil)
 		})
-		var aE = &instanceEvent{
+		var aE = &InstanceEvent{
 			Type:          "error",
 			Message:       "i am a message",
 			MessageOffset: "1",

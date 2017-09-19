@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"reflect"
 	"time"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
-
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/coocood/freecache"
 )
@@ -19,23 +19,24 @@ const failed = "failed"
 
 //main function that triggers everything else
 func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, cfg *config.Config) error {
+	log.Info("Starting error handle", log.Data{"INSTANCE_ID": e.InstanceID, "ERROR_MSG": e.EventMsg})
 
 	status, events, err := e.checkInstance(httpClient, cfg)
 	if err != nil {
 		return err
 	}
-
-	instanceEvents := &instanceEvent{
+	log.Info("Successfully checked instance", log.Data{"INSTANCE_ID": e.InstanceID, "INSTANCE_STATE": status})
+	instanceEvents := &InstanceEvent{
 		Type:          e.EventType,
 		Message:       e.EventMsg,
 		MessageOffset: "0",
 	}
 
-	timeNow := time.Now().String()
+	timeNow := time.Now()
 
 	jsonUpload, err := json.Marshal(Event{
 		Type:          e.EventType,
-		Time:          timeNow,
+		Time:          &timeNow,
 		Message:       e.EventMsg,
 		MessageOffset: "0",
 	})
@@ -79,7 +80,7 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 		return err
 	}
 
-	res, err := putRequests(URL, json, httpClient, cfg)
+	res, err := apiRequests(URL, "POST", json, httpClient, cfg)
 	if err != nil {
 		return err
 	}
@@ -98,12 +99,12 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 
 }
 
-func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config) (string, []*instanceEvent, error) {
+func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config) (string, []*InstanceEvent, error) {
 	log.Info("Checking instance avaiable:", log.Data{"Instance_ID": e.InstanceID})
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
 
-	event := make([]*instanceEvent, 0)
+	event := make([]*InstanceEvent, 0)
 
 	URL, err := urlParser(path)
 	if err != nil || URL == nil {
@@ -138,14 +139,13 @@ func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config)
 			return "", event, err
 		}
 	}
-	log.Info("Successfully unmarshalled data", nil)
+	log.Info("Successfully unmarshalled data", log.Data{"INSTANCE": e.InstanceID})
 
 	err = errorhandler(res.StatusCode)
 	if err != nil {
 		log.ErrorC("Non 200 or 201 response status returned", err, log.Data{"STATUS_CODE": res.StatusCode})
 		return "", event, err
 	}
-	log.Info("Successfully checked instance", log.Data{"INSTANCEID": instance.InstanceID})
 	return instance.State, instance.Events, nil
 }
 
@@ -170,7 +170,7 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 	}
 	log.Info("Successfully marshaled state", nil)
 
-	res, err := putRequests(URL, jsonUpload, httpClient, cfg)
+	res, err := apiRequests(URL, "PUT", jsonUpload, httpClient, cfg)
 	if err != nil {
 		return err
 	}
@@ -181,14 +181,13 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 	return nil
 }
 
-func putRequests(URL *url.URL, jsonUpload []byte, httpClient *http.Client, cfg *config.Config) (*http.Response, error) {
-	log.Info("Attempting PUT request", log.Data{"REQUESTED_URL": URL.String()})
-	req, err := http.NewRequest("PUT", URL.String(), bytes.NewBuffer(jsonUpload))
+func apiRequests(URL *url.URL, request string, jsonUpload []byte, httpClient *http.Client, cfg *config.Config) (*http.Response, error) {
+	log.Info("Attempting request", log.Data{"REQUESTED_URL": URL.String(), "REQUEST_METHOD": request})
+	req, err := http.NewRequest(request, URL.String(), bytes.NewBuffer(jsonUpload))
 	if err != nil {
-		log.ErrorC("Unsuccessful making PUT request", err, log.Data{"REQUESTED_URL": URL.String()})
+		log.ErrorC("Unsuccessful making request", err, log.Data{"REQUESTED_URL": URL.String()})
 		return nil, err
 	}
-	log.Info("Successfully made PUT connection", log.Data{"REQUESTED_URL": URL.String()})
 
 	req.Header.Set("Internal-token", cfg.ImportAuthToken)
 	log.Info("Token set... Requesting httpclient...", nil)
@@ -236,9 +235,9 @@ func errorhandler(statusCode int) error {
 	}
 }
 
-func arraySlicing(a *instanceEvent, event []*instanceEvent) bool {
+func arraySlicing(a *InstanceEvent, event []*InstanceEvent) bool {
 	for _, b := range event {
-		if b == a {
+		if reflect.DeepEqual(*a, *b) {
 			return true
 		}
 	}
