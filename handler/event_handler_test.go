@@ -23,13 +23,12 @@ var cfg = &config.Config{
 }
 
 //wrong DatasetAPI
-var cfgBadURL = &config.Config{
+var cfgBadurl = &config.Config{
 	NewInstanceTopic: "event-reporter",
 	Brokers:          []string{"localhost:9092"},
 	DatasetAPIURL:    "http://localho:21800",
 	ImportAuthToken:  "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	BindAddress:      ":22200",
-	// DatasetAPIURL: "http://localhost:21800",
 }
 
 //wrong auth token
@@ -71,8 +70,8 @@ func TestCheckInstance(t *testing.T) {
 	Convey("Given when you need to check an instance ", t, func() {
 		Convey("When I pass through instance information", func() {
 
-			_, _, err := e.checkInstance(httpClient, cfgBadURL)
-			Convey("URL should not parse", func() {
+			_, _, err := e.checkInstance(httpClient, cfgBadurl)
+			Convey("url should not parse", func() {
 				So(err, ShouldNotBeNil)
 			})
 
@@ -80,10 +79,9 @@ func TestCheckInstance(t *testing.T) {
 			Convey("Complete run through with 200 status response", func() {
 				So(err, ShouldBeNil)
 				So(state, ShouldNotBeNil)
-				// So(events, ShouldNotBeNil)
 			})
 
-			stateWrongInstance, events1, err := eWrongInstance.checkInstance(httpClient, cfgBadURL)
+			stateWrongInstance, events1, err := eWrongInstance.checkInstance(httpClient, cfgBadurl)
 			Convey("Complete run through with incorrect instanceID", func() {
 				So(err, ShouldNotBeNil)
 				So(stateWrongInstance, ShouldEqual, "")
@@ -99,7 +97,7 @@ func TestPutJobStatus(t *testing.T) {
 	Convey("Given when an instance job status needs to change", t, func() {
 		Convey("When the instance information is passed through", func() {
 
-			err1 := e.putJobStatus(httpClient, cfgBadURL)
+			err1 := e.putJobStatus(httpClient, cfgBadurl)
 			Convey("A run through with an incomplete url", func() {
 				So(err1, ShouldNotBeNil)
 			})
@@ -111,7 +109,7 @@ func TestPutJobStatus(t *testing.T) {
 		})
 	})
 }
-func TestPutEvents(t *testing.T) {
+func TestinsertEvents(t *testing.T) {
 	t.Parallel()
 
 	Convey("Given when an event needs to be added to an instance", t, func() {
@@ -126,12 +124,12 @@ func TestPutEvents(t *testing.T) {
 			Convey("No errors when marshalling an event", func() {
 				So(JSONerr, ShouldBeNil)
 			})
-			err1 := e.putEvent(httpClient, json, cfgBadAuth, "")
+			err1 := e.insertEvent(httpClient, json, cfgBadAuth, "")
 			Convey("Should through a status code error as it doesnt have authorisation", func() {
 				So(err1, ShouldNotBeNil)
 			})
-			err2 := e.putEvent(httpClient, json, cfgBadURL, "")
-			Convey("Should throw an error when trying to request the the put job status within the putevent method", func() {
+			err2 := e.insertEvent(httpClient, json, cfgBadurl, "")
+			Convey("Should throw an error when trying to request the the put job status within the insertEvent method", func() {
 				So(err2, ShouldNotBeNil)
 			})
 		})
@@ -164,7 +162,7 @@ func TestHandleEvents(t *testing.T) {
 func TestErrorHandler(t *testing.T) {
 	Convey("Given that a status code is provided", t, func() {
 		Convey("When an http response is sent", func() {
-			Convey("These response should not responde with an error", func() {
+			Convey("These response should not respond with an error", func() {
 				r := errorhandler(200)
 				So(r, ShouldBeNil)
 				r1 := errorhandler(201)

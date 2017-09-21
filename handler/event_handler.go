@@ -19,7 +19,7 @@ const failed = "failed"
 
 //main function that triggers everything else
 func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, cfg *config.Config) error {
-	log.Info("Starting error handle", log.Data{"INSTANCE_ID": e.InstanceID, "ERROR_MSG": e.EventMsg})
+	log.Info("Starting error handle", log.Data{"instance_id": e.InstanceID, "error_msg": e.EventMsg})
 
 	status, events, err := e.checkInstance(httpClient, cfg)
 	if err != nil {
@@ -45,10 +45,8 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 	value := []byte(e.EventMsg)
 	expire := 25
 
-	check := arraySlicing(instanceEvents, events)
-	if check {
-		_, err := c.Get(key)
-		if err != nil {
+	if ok := arraySlicing(instanceEvents, events); ok {
+		if _, err := c.Get(key); err != nil {
 			c.Set(key, value, expire)
 		} else {
 			c.Del(key)
@@ -58,7 +56,7 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 	got, err := c.Get(key)
 	if err != nil {
 		c.Set(key, value, expire)
-		err := e.putEvent(httpClient, jsonUpload, cfg, status)
+		err := e.insertEvent(httpClient, jsonUpload, cfg, status)
 		if err != nil {
 			return err
 		}
@@ -71,7 +69,7 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 /*this puts an event into the database under the instance you chose
 it does some checks to make sure the instance exists and checks the status
 if the status isn't already failed it will turn that instance to failed */
-func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config.Config, status string) error {
+func (e *EventReport) insertEvent(httpClient *http.Client, json []byte, cfg *config.Config, status string) error {
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID + "/events"
 
@@ -154,8 +152,8 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
 
-	URL, err := urlParser(path)
-	if err != nil || URL == nil {
+	url, err := urlParser(path)
+	if err != nil || url == nil {
 		return err
 	}
 
@@ -170,7 +168,7 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 	}
 	log.Info("Successfully marshaled state", nil)
 
-	res, err := apiRequests(URL, "PUT", jsonUpload, httpClient, cfg)
+	res, err := apiRequests(url, "PUT", jsonUpload, httpClient, cfg)
 	if err != nil {
 		return err
 	}
@@ -218,19 +216,19 @@ func urlParser(path string) (*url.URL, error) {
 func errorhandler(statusCode int) error {
 	switch statusCode {
 	case 200, 201:
-		log.Info("Successfully connection", log.Data{"Status code": statusCode})
+		log.Info("Successful connection", log.Data{"status_code": statusCode})
 		return nil
 	case 400:
-		log.Info("Bad client request", log.Data{"Status code": statusCode})
+		log.Info("Bad client request", log.Data{"status_code": statusCode})
 		return errors.New("JSON was incorrect")
 	case 401:
-		log.Info("Unauthorised access", log.Data{"Status code": statusCode})
+		log.Info("Unauthorised access", log.Data{"status_code": statusCode})
 		return errors.New("Unauthorised access")
 	case 404:
-		log.Info("Could not find instance", log.Data{"Status code": statusCode})
+		log.Info("Could not find instance", log.Data{"status_code": statusCode})
 		return errors.New("Could not find instance")
 	default:
-		log.Info("Unrecoginsed error", log.Data{"Status code": statusCode})
+		log.Info("Unrecoginsed error", log.Data{"status_code": statusCode})
 		return errors.New("Unrecoginsed error")
 	}
 }

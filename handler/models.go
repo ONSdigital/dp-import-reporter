@@ -2,7 +2,7 @@ package handler
 
 import "time"
 
-//struct for eventhandler which handles the instance and the start of the api
+//EventReport is struct for eventhandler which handles the messages being created/sent
 type EventReport struct {
 	InstanceID string `avro:"instance_id"`
 	EventType  string `avro:"event_type"`
@@ -15,7 +15,7 @@ type Instance struct {
 	NumberOfObservations      int64            `json:"total_observations"`
 	TotalInsertedObservations int64            `json:"total_inserted_observations,omitempty"`
 	State                     string           `json:"state"`
-	Events                    []*InstanceEvent `json:"events, omit"`
+	Events                    []*InstanceEvent `json:"events, omitempty"`
 }
 
 //I have removed the time from this instanceEvent making event checks easier

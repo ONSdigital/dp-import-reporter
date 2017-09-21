@@ -23,7 +23,7 @@ func logFatal(context string, err error, data log.Data) {
 
 func main() {
 
-	log.Namespace = "dp-event-reporter"
+	log.Namespace = "dp-import-api"
 
 	cfg, err := config.Get()
 	if err != nil {
