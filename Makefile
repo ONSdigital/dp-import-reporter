@@ -9,9 +9,13 @@ export GOARCH?=$(shell go env GOARCH)
 
 build:
 	@mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
-	go build -o $(BUILD_ARCH)/$(BIN_DIR)/dp-import-reporter cmd/dp-import-reporter/main.go
-debug: build
-	HUMAN_LOG=1 go run cmd/dp-import-reporter/main.go
+	go build -o $(BUILD_ARCH)/$(BIN_DIR)/dp-import-reporter consumer/main.go
+debug:
+	HUMAN_LOG=1 go run cmd/consumer/main.go
+example:
+	go run cmd/producer/main.go
+
 test:
 	go test -cover $(shell go list ./... | grep -v /vendor/)
-.PHONY: build debug test
+
+.PHONY: test build debug
