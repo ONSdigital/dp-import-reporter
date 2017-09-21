@@ -18,10 +18,10 @@ import (
 const failed = "failed"
 
 //main function that triggers everything else
-func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, cfg *config.Config) error {
+func (e *EventReport) HandleEvent(c *freecache.Cache, cfg *config.Config) error {
 	log.Info("Starting error handle", log.Data{"INSTANCE_ID": e.InstanceID, "ERROR_MSG": e.EventMsg})
 
-	status, events, err := e.checkInstance(httpClient, cfg)
+	status, events, err := e.checkInstance(cfg)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 	got, err := c.Get(key)
 	if err != nil {
 		c.Set(key, value, expire)
-		err := e.putEvent(httpClient, jsonUpload, cfg, status)
+		err := e.putEvent(jsonUpload, cfg, status)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func (e *EventReport) HandleEvent(httpClient *http.Client, c *freecache.Cache, c
 /*this puts an event into the database under the instance you chose
 it does some checks to make sure the instance exists and checks the status
 if the status isn't already failed it will turn that instance to failed */
-func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config.Config, status string) error {
+func (e *EventReport) putEvent(json []byte, cfg *config.Config, status string) error {
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID + "/events"
 
@@ -80,12 +80,12 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 		return err
 	}
 
-	res, err := apiRequests(URL, "POST", json, httpClient, cfg)
+	res, err := apiRequests(URL, "POST", json, cfg)
 	if err != nil {
 		return err
 	}
 	if e.EventType == "error" && status != failed {
-		err := e.putJobStatus(httpClient, cfg)
+		err := e.putJobStatus(cfg)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func (e *EventReport) putEvent(httpClient *http.Client, json []byte, cfg *config
 
 }
 
-func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config) (string, []*InstanceEvent, error) {
+func (e *EventReport) checkInstance(cfg *config.Config) (string, []*InstanceEvent, error) {
 	log.Info("Checking instance avaiable:", log.Data{"Instance_ID": e.InstanceID})
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
@@ -150,7 +150,7 @@ func (e *EventReport) checkInstance(httpClient *http.Client, cfg *config.Config)
 }
 
 // This will put a error status in the state
-func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) error {
+func (e *EventReport) putJobStatus(cfg *config.Config) error {
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
 
@@ -170,7 +170,7 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 	}
 	log.Info("Successfully marshaled state", nil)
 
-	res, err := apiRequests(URL, "PUT", jsonUpload, httpClient, cfg)
+	res, err := apiRequests(URL, "PUT", jsonUpload, cfg)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (e *EventReport) putJobStatus(httpClient *http.Client, cfg *config.Config) 
 	return nil
 }
 
-func apiRequests(URL *url.URL, request string, jsonUpload []byte, httpClient *http.Client, cfg *config.Config) (*http.Response, error) {
+func apiRequests(URL *url.URL, request string, jsonUpload []byte, cfg *config.Config) (*http.Response, error) {
 	log.Info("Attempting request", log.Data{"REQUESTED_URL": URL.String(), "REQUEST_METHOD": request})
 	req, err := http.NewRequest(request, URL.String(), bytes.NewBuffer(jsonUpload))
 	if err != nil {
@@ -191,7 +191,8 @@ func apiRequests(URL *url.URL, request string, jsonUpload []byte, httpClient *ht
 
 	req.Header.Set("Internal-token", cfg.ImportAuthToken)
 	log.Info("Token set... Requesting httpclient...", nil)
-	res, err := httpClient.Do(req)
+	client := &http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		log.ErrorC("Error requesting httpclient", err, nil)
 		return nil, err

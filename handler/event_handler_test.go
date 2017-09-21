@@ -71,19 +71,19 @@ func TestCheckInstance(t *testing.T) {
 	Convey("Given when you need to check an instance ", t, func() {
 		Convey("When I pass through instance information", func() {
 
-			_, _, err := e.checkInstance(httpClient, cfgBadURL)
+			_, _, err := e.checkInstance(cfgBadURL)
 			Convey("URL should not parse", func() {
 				So(err, ShouldNotBeNil)
 			})
 
-			state, _, err := e.checkInstance(httpClient, cfg)
+			state, _, err := e.checkInstance(cfg)
 			Convey("Complete run through with 200 status response", func() {
 				So(err, ShouldBeNil)
 				So(state, ShouldNotBeNil)
 				// So(events, ShouldNotBeNil)
 			})
 
-			stateWrongInstance, events1, err := eWrongInstance.checkInstance(httpClient, cfgBadURL)
+			stateWrongInstance, events1, err := eWrongInstance.checkInstance(cfgBadURL)
 			Convey("Complete run through with incorrect instanceID", func() {
 				So(err, ShouldNotBeNil)
 				So(stateWrongInstance, ShouldEqual, "")
@@ -99,12 +99,12 @@ func TestPutJobStatus(t *testing.T) {
 	Convey("Given when an instance job status needs to change", t, func() {
 		Convey("When the instance information is passed through", func() {
 
-			err1 := e.putJobStatus(httpClient, cfgBadURL)
+			err1 := e.putJobStatus(cfgBadURL)
 			Convey("A run through with an incomplete url", func() {
 				So(err1, ShouldNotBeNil)
 			})
 
-			err2 := e.putJobStatus(httpClient, cfgBadAuth)
+			err2 := e.putJobStatus(cfgBadAuth)
 			Convey("A run through without the auth token", func() {
 				So(err2, ShouldNotBeNil)
 			})
@@ -126,11 +126,11 @@ func TestPutEvents(t *testing.T) {
 			Convey("No errors when marshalling an event", func() {
 				So(JSONerr, ShouldBeNil)
 			})
-			err1 := e.putEvent(httpClient, json, cfgBadAuth, "")
+			err1 := e.putEvent(json, cfgBadAuth, "")
 			Convey("Should through a status code error as it doesnt have authorisation", func() {
 				So(err1, ShouldNotBeNil)
 			})
-			err2 := e.putEvent(httpClient, json, cfgBadURL, "")
+			err2 := e.putEvent(json, cfgBadURL, "")
 			Convey("Should throw an error when trying to request the the put job status within the putevent method", func() {
 				So(err2, ShouldNotBeNil)
 			})
@@ -145,15 +145,15 @@ func TestHandleEvents(t *testing.T) {
 			cacheSize := cfg.CacheSize
 			c := freecache.NewCache(cacheSize)
 			debug.SetGCPercent(20)
-			err := e.HandleEvent(httpClient, c, cfg)
+			err := e.HandleEvent(c, cfg)
 			Convey("Complete run through", func() {
 				So(err, ShouldBeNil)
 			})
-			err1 := eWrongInstance.HandleEvent(httpClient, c, cfg)
+			err1 := eWrongInstance.HandleEvent(c, cfg)
 			Convey("Pass through an incorrect instance ID", func() {
 				So(err1, ShouldNotBeNil)
 			})
-			err2 := eWithRandomMsg.HandleEvent(httpClient, c, cfg)
+			err2 := eWithRandomMsg.HandleEvent(c, cfg)
 			Convey("Should add the event to the events log ", func() {
 				So(err2, ShouldBeNil)
 			})
@@ -187,7 +187,7 @@ func TestErrorHandler(t *testing.T) {
 
 func TestArraySlicing(t *testing.T) {
 	Convey("A method which slices a events array up", t, func() {
-		_, events, err := e.checkInstance(httpClient, cfg)
+		_, events, err := e.checkInstance(cfg)
 		Convey("It brings back a valid instance", func() {
 			So(err, ShouldBeNil)
 		})

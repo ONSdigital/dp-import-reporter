@@ -1,7 +1,7 @@
 package main
 
 import (
-	"net/http"
+	"errors"
 	"testing"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
@@ -44,16 +44,13 @@ func TestConsumer(t *testing.T) {
 		Convey("Check that the newInstanceEvent matches", func() {
 			So(newInstanceEventConsumer, ShouldEqual, newInstanceEventConsumer)
 		})
-		client := &http.Client{}
-
-		c := cacheSetup(cfg)
 
 		kafkaMessege := &kafkaMsg{
 			myBytes: msg,
 			commitI: 0,
 		}
 
-		go consume(newInstanceEventConsumer, cfg, client, c)
+		go consume(newInstanceEventConsumer, cfg)
 		newInstanceEventConsumer.Incoming() <- *kafkaMessege
 
 		//incorrect instance id will throw error.
@@ -79,6 +76,22 @@ func TestInit(t *testing.T) {
 		newKakfaConsumer, err := consumerInit(cfg)
 		So(newKakfaConsumer, ShouldNotBeNil)
 		So(err, ShouldBeNil)
+
+	})
+}
+func TestError(t *testing.T) {
+	Convey("When an error message is sent to the error collector", t, func() {
+		cfg, _ := config.Get()
+
+		newInstanceEventConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
+		Convey("Check error for kafka consumer group", func() {
+			So(err, ShouldEqual, nil)
+		})
+		Convey("Check that the newInstanceEvent matches", func() {
+			So(newInstanceEventConsumer, ShouldEqual, newInstanceEventConsumer)
+		})
+		go consume(newInstanceEventConsumer, cfg)
+		newInstanceEventConsumer.Errors() <- errors.New("AN ERROR")
 
 	})
 }
