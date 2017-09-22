@@ -14,6 +14,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+//TODO all the commented out sections need to be mocked/ part of the mocking process
+
 //Correct
 var cfg = &config.Config{
 	NewInstanceTopic: "event-reporter",
@@ -77,12 +79,12 @@ func TestCheckInstance(t *testing.T) {
 				So(err, ShouldNotBeNil)
 			})
 
-			state, _, err := checkInstance(cfg, e)
-			Convey("Complete run through with 200 status response", func() {
-				So(err, ShouldBeNil)
-				So(state, ShouldNotBeNil)
-				// So(events, ShouldNotBeNil)
-			})
+			// state, _, err := checkInstance(cfg, e)
+			// Convey("Complete run through with 200 status response", func() {
+			// 	So(err, ShouldBeNil)
+			// 	So(state, ShouldNotBeNil)
+			// 	// So(events, ShouldNotBeNil)
+			// })
 
 			stateWrongInstance, events1, err := checkInstance(cfgBadURL, eWrongInstance)
 			Convey("Complete run through with incorrect instanceID", func() {
@@ -146,18 +148,18 @@ func TestHandleEvents(t *testing.T) {
 			cacheSize := cfg.CacheSize
 			c := freecache.NewCache(cacheSize)
 			debug.SetGCPercent(20)
-			err := HandleEvent(c, cfg, e)
-			Convey("Complete run through", func() {
-				So(err, ShouldBeNil)
-			})
+			// err := HandleEvent(c, cfg, e)
+			// Convey("Complete run through", func() {
+			// 	So(err, ShouldBeNil)
+			// })
 			err1 := HandleEvent(c, cfg, eWrongInstance)
 			Convey("Pass through an incorrect instance ID", func() {
 				So(err1, ShouldNotBeNil)
 			})
-			err2 := HandleEvent(c, cfg, eWithRandomMsg)
-			Convey("Should add the event to the events log ", func() {
-				So(err2, ShouldBeNil)
-			})
+			// err2 := HandleEvent(c, cfg, eWithRandomMsg)
+			// Convey("Should add the event to the events log ", func() {
+			// 	So(err2, ShouldBeNil)
+			// })
 		})
 	})
 
@@ -188,10 +190,11 @@ func TestErrorHandler(t *testing.T) {
 
 func TestArraySlicing(t *testing.T) {
 	Convey("A method which slices a events array up", t, func() {
-		_, events, err := checkInstance(cfg, e)
-		Convey("It brings back a valid instance", func() {
-			So(err, ShouldBeNil)
-		})
+		// _, events, err := checkInstance(cfg, e)
+		// Convey("It brings back a valid instance", func() {
+		// 	So(err, ShouldBeNil)
+		// })
+		events := make([]*errorModel.InstanceEvent, 0)
 		var aE = &errorModel.InstanceEvent{
 			Type:          "error",
 			Message:       "i am a message",
