@@ -96,7 +96,6 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config) 
 				if err := errorschema.ReportedEventSchema.Unmarshal(newInstanceMessage.GetData(), &msg); err != nil {
 					log.ErrorC("failed to unmarshal message", err, log.Data{"topic": cfg.NewInstanceTopic})
 					// Fatal error reading message, should never fall in here
-					errorChannel <- true
 					continue
 				}
 
@@ -105,6 +104,7 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config) 
 					continue
 				}
 				newInstanceMessage.Commit()
+
 			case newImportConsumerErrorMessage := <-newInstanceEventConsumer.Errors():
 				log.Error(errors.New("consumer recieved error: "), log.Data{"error": newImportConsumerErrorMessage, "topic": cfg.NewInstanceTopic})
 				errorChannel <- true
@@ -124,6 +124,8 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config) 
 }
 
 func shutdownGracefully(consumer *kafka.ConsumerGroup, httpServer *server.Server, cfg *config.Config) {
+	log.Info("Attempting graceful shut down...", nil)
+
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
 	err := consumer.Close(ctx)
 	if err != nil {
@@ -136,7 +138,7 @@ func shutdownGracefully(consumer *kafka.ConsumerGroup, httpServer *server.Server
 	}
 
 	cancel()
-	log.Info("Gracefully shut down application...", nil)
+	log.Info("Gracefully shut down application", nil)
 
 	os.Exit(1)
 }
