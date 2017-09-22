@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
+	"github.com/ONSdigital/go-ns/errorhandler/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/coocood/freecache"
 )
@@ -18,15 +19,16 @@ import (
 const failed = "failed"
 
 //main function that triggers everything else
-func (e *EventReport) HandleEvent(c *freecache.Cache, cfg *config.Config) error {
+func HandleEvent(c *freecache.Cache, cfg *config.Config, e *errorModel.EventReport) error {
 	log.Info("Starting error handle", log.Data{"INSTANCE_ID": e.InstanceID, "ERROR_MSG": e.EventMsg})
 
-	status, events, err := e.checkInstance(cfg)
+	status, events, err := checkInstance(cfg, e)
 	if err != nil {
 		return err
 	}
+
 	log.Info("Successfully checked instance", log.Data{"INSTANCE_ID": e.InstanceID, "INSTANCE_STATE": status})
-	instanceEvents := &InstanceEvent{
+	instanceEvents := &errorModel.InstanceEvent{
 		Type:          e.EventType,
 		Message:       e.EventMsg,
 		MessageOffset: "0",
@@ -34,7 +36,7 @@ func (e *EventReport) HandleEvent(c *freecache.Cache, cfg *config.Config) error 
 
 	timeNow := time.Now()
 
-	jsonUpload, err := json.Marshal(Event{
+	jsonUpload, err := json.Marshal(errorModel.Event{
 		Type:          e.EventType,
 		Time:          &timeNow,
 		Message:       e.EventMsg,
@@ -58,7 +60,7 @@ func (e *EventReport) HandleEvent(c *freecache.Cache, cfg *config.Config) error 
 	got, err := c.Get(key)
 	if err != nil {
 		c.Set(key, value, expire)
-		err := e.putEvent(jsonUpload, cfg, status)
+		err := insertEvent(jsonUpload, cfg, status, e)
 		if err != nil {
 			return err
 		}
@@ -71,7 +73,7 @@ func (e *EventReport) HandleEvent(c *freecache.Cache, cfg *config.Config) error 
 /*this puts an event into the database under the instance you chose
 it does some checks to make sure the instance exists and checks the status
 if the status isn't already failed it will turn that instance to failed */
-func (e *EventReport) putEvent(json []byte, cfg *config.Config, status string) error {
+func insertEvent(json []byte, cfg *config.Config, status string, e *errorModel.EventReport) error {
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID + "/events"
 
@@ -85,13 +87,13 @@ func (e *EventReport) putEvent(json []byte, cfg *config.Config, status string) e
 		return err
 	}
 	if e.EventType == "error" && status != failed {
-		err := e.putJobStatus(cfg)
+		err := putJobStatus(cfg, e)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = errorhandler(res.StatusCode)
+	err = responseStatus(res.StatusCode)
 	if err != nil {
 		return err
 	}
@@ -99,12 +101,12 @@ func (e *EventReport) putEvent(json []byte, cfg *config.Config, status string) e
 
 }
 
-func (e *EventReport) checkInstance(cfg *config.Config) (string, []*InstanceEvent, error) {
+func checkInstance(cfg *config.Config, e *errorModel.EventReport) (string, []*errorModel.InstanceEvent, error) {
 	log.Info("Checking instance avaiable:", log.Data{"Instance_ID": e.InstanceID})
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
 
-	event := make([]*InstanceEvent, 0)
+	event := make([]*errorModel.InstanceEvent, 0)
 
 	URL, err := urlParser(path)
 	if err != nil || URL == nil {
@@ -121,7 +123,7 @@ func (e *EventReport) checkInstance(cfg *config.Config) (string, []*InstanceEven
 
 	defer res.Body.Close()
 
-	var instance Instance
+	var instance errorModel.Instance
 
 	log.Info("Reading response body...", nil)
 	body, err := ioutil.ReadAll(res.Body)
@@ -133,7 +135,7 @@ func (e *EventReport) checkInstance(cfg *config.Config) (string, []*InstanceEven
 
 	log.Info("Attempting unmarshalling response body...", nil)
 	if err := json.Unmarshal(body, &instance); err != nil {
-		err := errorhandler(res.StatusCode)
+		err := responseStatus(res.StatusCode)
 		if err != nil {
 			log.ErrorC("Error unmarshalling response body", err, log.Data{"STATUS_CODE": res.StatusCode})
 			return "", event, err
@@ -141,7 +143,7 @@ func (e *EventReport) checkInstance(cfg *config.Config) (string, []*InstanceEven
 	}
 	log.Info("Successfully unmarshalled data", log.Data{"INSTANCE": e.InstanceID})
 
-	err = errorhandler(res.StatusCode)
+	err = responseStatus(res.StatusCode)
 	if err != nil {
 		log.ErrorC("Non 200 or 201 response status returned", err, log.Data{"STATUS_CODE": res.StatusCode})
 		return "", event, err
@@ -150,7 +152,7 @@ func (e *EventReport) checkInstance(cfg *config.Config) (string, []*InstanceEven
 }
 
 // This will put a error status in the state
-func (e *EventReport) putJobStatus(cfg *config.Config) error {
+func putJobStatus(cfg *config.Config, e *errorModel.EventReport) error {
 
 	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
 
@@ -160,7 +162,7 @@ func (e *EventReport) putJobStatus(cfg *config.Config) error {
 	}
 
 	log.Info("Attempting to marshal state...", nil)
-	jsonUpload, err := json.Marshal(&State{
+	jsonUpload, err := json.Marshal(&errorModel.State{
 		State: failed,
 	})
 
@@ -174,7 +176,7 @@ func (e *EventReport) putJobStatus(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	err = errorhandler(res.StatusCode)
+	err = responseStatus(res.StatusCode)
 	if err != nil {
 		return err
 	}
@@ -204,19 +206,19 @@ func apiRequests(URL *url.URL, request string, jsonUpload []byte, cfg *config.Co
 	return res, nil
 }
 func urlParser(path string) (*url.URL, error) {
-	var URL *url.URL
+	var url *url.URL
 	log.Info("Attempting parsing path: "+path, nil)
 
-	URL, err := url.Parse(path)
+	url, err := url.Parse(path)
 	if err != nil {
 		log.ErrorC("Unsuccessful parsing of path", err, nil)
 		return nil, err
 	}
-	log.Info("Successfully parsed path", log.Data{"URL": URL.String()})
-	return URL, nil
+	log.Info("Successfully parsed path", log.Data{"URL": url.String()})
+	return url, nil
 }
 
-func errorhandler(statusCode int) error {
+func responseStatus(statusCode int) error {
 	switch statusCode {
 	case 200, 201:
 		log.Info("Successfully connection", log.Data{"Status code": statusCode})
@@ -236,7 +238,7 @@ func errorhandler(statusCode int) error {
 	}
 }
 
-func arraySlicing(a *InstanceEvent, event []*InstanceEvent) bool {
+func arraySlicing(a *errorModel.InstanceEvent, event []*errorModel.InstanceEvent) bool {
 	for _, b := range event {
 		if reflect.DeepEqual(*a, *b) {
 			return true

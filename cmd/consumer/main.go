@@ -9,10 +9,12 @@ import (
 	"syscall"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
+	"github.com/ONSdigital/dp-import-reporter/handler"
+	"github.com/ONSdigital/go-ns/errorhandler/models"
+	"github.com/ONSdigital/go-ns/errorhandler/schema"
+
 	"github.com/gorilla/mux"
 
-	"github.com/ONSdigital/dp-import-reporter/handler"
-	"github.com/ONSdigital/dp-import-reporter/schema"
 	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
@@ -90,14 +92,15 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config) 
 		for running {
 			select {
 			case newInstanceMessage := <-newInstanceEventConsumer.Incoming():
-				var msg handler.EventReport
-				if err := schema.ReportedEventSchema.Unmarshal(newInstanceMessage.GetData(), &msg); err != nil {
+				var msg errorModel.EventReport
+				if err := errorschema.ReportedEventSchema.Unmarshal(newInstanceMessage.GetData(), &msg); err != nil {
 					log.ErrorC("failed to unmarshal message", err, log.Data{"topic": cfg.NewInstanceTopic})
 					// Fatal error reading message, should never fall in here
 					errorChannel <- true
 					continue
 				}
-				if err := msg.HandleEvent(c, cfg); err != nil {
+
+				if err := handler.HandleEvent(c, cfg, &msg); err != nil {
 					log.ErrorC("Failure updating events", err, log.Data{"topic": cfg.NewInstanceTopic})
 					continue
 				}
@@ -115,13 +118,8 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config) 
 		}
 	}()
 	<-errorChannel
-	// running = false
 
 	shutdownGracefully(newInstanceEventConsumer, httpServer, cfg)
-
-	// assert: only get here when we have an error, which has been logged
-	// newInstanceEventConsumer.Closer() <- true
-	// logFatal("gracefully shutting down application...", errors.New("Aborting application, gracfully shutting down"), nil)
 
 }
 

@@ -5,10 +5,13 @@ import (
 	"testing"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
-	"github.com/ONSdigital/dp-import-reporter/handler"
-	"github.com/ONSdigital/dp-import-reporter/schema"
+	"github.com/ONSdigital/go-ns/errorhandler/models"
+
+	"github.com/ONSdigital/go-ns/errorhandler/schema"
+
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -31,7 +34,7 @@ func TestConsumer(t *testing.T) {
 	Convey("Set up the variables for test enviroment", t, func() {
 		cfg, _ := config.Get()
 		log.Namespace = "dp-event-reporter"
-		msg, _ := schema.ReportedEventSchema.Marshal(&handler.EventReport{
+		msg, _ := errorschema.ReportedEventSchema.Marshal(&errorModel.EventReport{
 			InstanceID: "a4695fee-f0a2-49c4-b136-e3ca8dd40476",
 			EventType:  "error",
 			EventMsg:   "Broken on something.",
@@ -54,7 +57,7 @@ func TestConsumer(t *testing.T) {
 		newInstanceEventConsumer.Incoming() <- *kafkaMessege
 
 		//incorrect instance id will throw error.
-		msg1, err1 := schema.ReportedEventSchema.Marshal(&handler.EventReport{
+		msg1, err1 := errorschema.ReportedEventSchema.Marshal(&errorModel.EventReport{
 			InstanceID: "a4695fee-f0a2-49c4-b136-e3ca822dd40476",
 			EventType:  "error",
 			EventMsg:   "Broken on something.",
@@ -79,7 +82,7 @@ func TestInit(t *testing.T) {
 
 	})
 }
-func TestError(t *testing.T) {
+func TestConsumerError(t *testing.T) {
 	Convey("When an error message is sent to the error collector", t, func() {
 		cfg, _ := config.Get()
 

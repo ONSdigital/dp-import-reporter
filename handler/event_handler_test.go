@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
+	"github.com/ONSdigital/go-ns/errorhandler/models"
 	"github.com/coocood/freecache"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -42,24 +43,24 @@ var cfgBadAuth = &config.Config{
 }
 
 //correct
-var e = EventReport{
+var e = &errorModel.EventReport{
 	InstanceID: "479dcd03-09b1-4273-b49a-58533f084add",
 	EventType:  "error",
 	EventMsg:   "Broken on something.",
 }
 
 //wrong instance
-var eWrongInstance = EventReport{
+var eWrongInstance = &errorModel.EventReport{
 	InstanceID: "a4695fee-f0a2-49c4-b136-eWithRandomMsgca8dd40612",
 	EventType:  "error",
 	EventMsg:   "Broken on something.",
 }
-var eWrongInstanceMsg = EventReport{
+var eWrongInstanceMsg = &errorModel.EventReport{
 	InstanceID: "a4695fee-f0a2-49c4-b136-eWithRandomMsgca8dd40612",
 	EventType:  "error",
 	EventMsg:   "Broken on ",
 }
-var eWithRandomMsg = EventReport{
+var eWithRandomMsg = &errorModel.EventReport{
 	InstanceID: "479dcd03-09b1-4273-b49a-58533f084add",
 	EventType:  "error",
 	EventMsg:   "Broken on something." + string(rand.Int()),
@@ -71,19 +72,19 @@ func TestCheckInstance(t *testing.T) {
 	Convey("Given when you need to check an instance ", t, func() {
 		Convey("When I pass through instance information", func() {
 
-			_, _, err := e.checkInstance(cfgBadURL)
+			_, _, err := checkInstance(cfgBadURL, e)
 			Convey("URL should not parse", func() {
 				So(err, ShouldNotBeNil)
 			})
 
-			state, _, err := e.checkInstance(cfg)
+			state, _, err := checkInstance(cfg, e)
 			Convey("Complete run through with 200 status response", func() {
 				So(err, ShouldBeNil)
 				So(state, ShouldNotBeNil)
 				// So(events, ShouldNotBeNil)
 			})
 
-			stateWrongInstance, events1, err := eWrongInstance.checkInstance(cfgBadURL)
+			stateWrongInstance, events1, err := checkInstance(cfgBadURL, eWrongInstance)
 			Convey("Complete run through with incorrect instanceID", func() {
 				So(err, ShouldNotBeNil)
 				So(stateWrongInstance, ShouldEqual, "")
@@ -99,25 +100,25 @@ func TestPutJobStatus(t *testing.T) {
 	Convey("Given when an instance job status needs to change", t, func() {
 		Convey("When the instance information is passed through", func() {
 
-			err1 := e.putJobStatus(cfgBadURL)
+			err1 := putJobStatus(cfgBadURL, e)
 			Convey("A run through with an incomplete url", func() {
 				So(err1, ShouldNotBeNil)
 			})
 
-			err2 := e.putJobStatus(cfgBadAuth)
+			err2 := putJobStatus(cfgBadAuth, e)
 			Convey("A run through without the auth token", func() {
 				So(err2, ShouldNotBeNil)
 			})
 		})
 	})
 }
-func TestPutEvents(t *testing.T) {
+func TestinsertEvents(t *testing.T) {
 	t.Parallel()
 
 	Convey("Given when an event needs to be added to an instance", t, func() {
 		Convey("When the instance information is passed through", func() {
 			timeNow := time.Now()
-			json, JSONerr := json.Marshal(Event{
+			json, JSONerr := json.Marshal(errorModel.Event{
 				Type:          e.EventType,
 				Time:          &timeNow,
 				Message:       e.EventMsg,
@@ -126,12 +127,12 @@ func TestPutEvents(t *testing.T) {
 			Convey("No errors when marshalling an event", func() {
 				So(JSONerr, ShouldBeNil)
 			})
-			err1 := e.putEvent(json, cfgBadAuth, "")
+			err1 := insertEvent(json, cfgBadAuth, "", e)
 			Convey("Should through a status code error as it doesnt have authorisation", func() {
 				So(err1, ShouldNotBeNil)
 			})
-			err2 := e.putEvent(json, cfgBadURL, "")
-			Convey("Should throw an error when trying to request the the put job status within the putevent method", func() {
+			err2 := insertEvent(json, cfgBadURL, "", e)
+			Convey("Should throw an error when trying to request the the put job status within the insertEvent method", func() {
 				So(err2, ShouldNotBeNil)
 			})
 		})
@@ -145,15 +146,15 @@ func TestHandleEvents(t *testing.T) {
 			cacheSize := cfg.CacheSize
 			c := freecache.NewCache(cacheSize)
 			debug.SetGCPercent(20)
-			err := e.HandleEvent(c, cfg)
+			err := HandleEvent(c, cfg, e)
 			Convey("Complete run through", func() {
 				So(err, ShouldBeNil)
 			})
-			err1 := eWrongInstance.HandleEvent(c, cfg)
+			err1 := HandleEvent(c, cfg, eWrongInstance)
 			Convey("Pass through an incorrect instance ID", func() {
 				So(err1, ShouldNotBeNil)
 			})
-			err2 := eWithRandomMsg.HandleEvent(c, cfg)
+			err2 := HandleEvent(c, cfg, eWithRandomMsg)
 			Convey("Should add the event to the events log ", func() {
 				So(err2, ShouldBeNil)
 			})
@@ -165,19 +166,19 @@ func TestErrorHandler(t *testing.T) {
 	Convey("Given that a status code is provided", t, func() {
 		Convey("When an http response is sent", func() {
 			Convey("These response should not responde with an error", func() {
-				r := errorhandler(200)
+				r := responseStatus(200)
 				So(r, ShouldBeNil)
-				r1 := errorhandler(201)
+				r1 := responseStatus(201)
 				So(r1, ShouldBeNil)
 			})
 			Convey("These response should return errors", func() {
-				r2 := errorhandler(404)
+				r2 := responseStatus(404)
 				So(r2, ShouldNotBeNil)
-				r3 := errorhandler(401)
+				r3 := responseStatus(401)
 				So(r3, ShouldNotBeNil)
-				r4 := errorhandler(400)
+				r4 := responseStatus(400)
 				So(r4, ShouldNotBeNil)
-				r5 := errorhandler(60000)
+				r5 := responseStatus(60000)
 				So(r5, ShouldNotBeNil)
 			})
 
@@ -187,11 +188,11 @@ func TestErrorHandler(t *testing.T) {
 
 func TestArraySlicing(t *testing.T) {
 	Convey("A method which slices a events array up", t, func() {
-		_, events, err := e.checkInstance(cfg)
+		_, events, err := checkInstance(cfg, e)
 		Convey("It brings back a valid instance", func() {
 			So(err, ShouldBeNil)
 		})
-		var aE = &InstanceEvent{
+		var aE = &errorModel.InstanceEvent{
 			Type:          "error",
 			Message:       "i am a message",
 			MessageOffset: "1",
