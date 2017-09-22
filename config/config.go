@@ -29,7 +29,7 @@ func Get() (*Config, error) {
 		ImportAuthToken:         "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:             ":22200",
 		CacheSize:               100 * 1024 * 1024,
-		GracefulShutdownTimeout: time.Second * 10,
+		GracefulShutdownTimeout: time.Second * 5,
 	}
 	if err := gofigure.Gofigure(cfg); err != nil {
 		return cfg, err
