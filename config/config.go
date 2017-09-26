@@ -3,25 +3,29 @@ package config
 import (
 	"time"
 
-	"github.com/ian-kent/gofigure"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/ONSdigital/go-ns/log"
 )
 
+// Config struct to hold application configuration.
 type Config struct {
-	NewInstanceTopic        string        `env:"CONSUMER_TOPIC" flag:"event-reporter" flagDesc:"topic name for import file available events"`
-	Brokers                 []string      `env:"KAFKA_ADDR" flag:"kafka-addr" flagDesc:"topic name for import file available events"`
-	DatasetAPIURL           string        `env:"IMPORT_API_URL" flag:"import-addr" flagDesc:"The address of Import API"`
-	ImportAuthToken         string        `env:"IMPORT_AUTH_TOKEN" flag:"import-auth-token" flagDesc:"Authentication token for access to import API"`
-	BindAddress             string        `env:"BIND_ADDR" flag:"bind-addr" flagDesc:"The bind port"`
-	CacheSize               int           `env:"CACHE_SIZE" flag:"CACHE_SIZE" flagDesc:"The bind port"`
+	NewInstanceTopic        string        `envconfig:"CONSUMER_TOPIC"`
+	Brokers                 []string      `envconfig:"KAFKA_ADDR"`
+	DatasetAPIURL           string        `envconfig:"IMPORT_API_URL"`
+	ImportAuthToken         string        `envconfig:"IMPORT_AUTH_TOKEN"`
+	BindAddress             string        `envconfig:"BIND_ADDR"`
+	CacheSize               int           `envconfig:"CACHE_SIZE"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 }
 
 var cfg *Config
+var processConfig func(prefix string, spec interface{}) error = envconfig.Process
 
 func Get() (*Config, error) {
 	if cfg != nil {
 		return cfg, nil
 	}
+
 	cfg = &Config{
 		NewInstanceTopic:        "event-reporter",
 		Brokers:                 []string{"localhost:9092"},
@@ -31,8 +35,10 @@ func Get() (*Config, error) {
 		CacheSize:               100 * 1024 * 1024,
 		GracefulShutdownTimeout: time.Second * 5,
 	}
-	if err := gofigure.Gofigure(cfg); err != nil {
-		return cfg, err
+
+	if err := processConfig("", cfg); err != nil {
+		log.ErrorC("error while attempting to load env config", err, nil)
+		return nil, err
 	}
 	return cfg, nil
 }

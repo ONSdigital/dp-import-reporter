@@ -13,13 +13,10 @@ import (
 	"github.com/ONSdigital/go-ns/errorhandler/models"
 	"github.com/ONSdigital/go-ns/errorhandler/schema"
 
-	"github.com/gorilla/mux"
-
-	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/server"
 	"github.com/coocood/freecache"
+	"github.com/ONSdigital/dp-import-reporter/healthcheck"
 )
 
 // logFatal is a utility method for a common failure pattern in main()
@@ -29,12 +26,11 @@ func logFatal(context string, err error, data log.Data) {
 }
 
 func main() {
-
 	log.Namespace = "dp-event-reporter"
 
 	cfg, err := config.Get()
 	if err != nil {
-		logFatal("Config was not configured correctly: ", err, nil)
+		os.Exit(1)
 	}
 
 	newInstanceEventConsumer, err := consumerInit(cfg)
@@ -45,22 +41,7 @@ func main() {
 	consume(newInstanceEventConsumer, cfg)
 
 }
-func serverRunner(cfg *config.Config, errorChannel chan bool) *server.Server {
-	router := mux.NewRouter()
-	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
-	httpServer := server.New(cfg.BindAddress, router)
 
-	//disable autohandling of os siginals by server
-	httpServer.HandleOSSignals = false
-	go func() {
-		log.Debug("Starting http server", log.Data{"bind_addr": cfg.BindAddress})
-		if err := httpServer.ListenAndServe(); err != nil {
-			errorChannel <- true
-		}
-	}()
-
-	return httpServer
-}
 func consumerInit(cfg *config.Config) (*kafka.ConsumerGroup, error) {
 
 	log.Info("starting", log.Data{
@@ -82,12 +63,14 @@ func cacheSetup(cfg *config.Config) *freecache.Cache {
 
 func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config) {
 	running := true
-	errorChannel := make(chan bool)
+	errorChannel := make(chan error)
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	//cache init
 	c := cacheSetup(cfg)
-	httpServer := serverRunner(cfg, errorChannel)
+
+	healthcheck.NewHandler(cfg.BindAddress, errorChannel)
+
 	go func() {
 		for running {
 			select {
@@ -107,23 +90,23 @@ func consume(newInstanceEventConsumer *kafka.ConsumerGroup, cfg *config.Config) 
 
 			case newImportConsumerErrorMessage := <-newInstanceEventConsumer.Errors():
 				log.Error(errors.New("consumer recieved error: "), log.Data{"error": newImportConsumerErrorMessage, "topic": cfg.NewInstanceTopic})
-				errorChannel <- true
+				errorChannel <- newImportConsumerErrorMessage
 			case <-errorChannel:
 				log.ErrorC("Error channel..", errors.New("Errors"), nil)
-				shutdownGracefully(newInstanceEventConsumer, httpServer, cfg)
+				shutdownGracefully(newInstanceEventConsumer, cfg)
 			case <-signals:
 				log.ErrorC("Signal was sent to application", errors.New("signal passed to application"), nil)
-				shutdownGracefully(newInstanceEventConsumer, httpServer, cfg)
+				shutdownGracefully(newInstanceEventConsumer, cfg)
 			}
 		}
 	}()
 	<-errorChannel
 
-	shutdownGracefully(newInstanceEventConsumer, httpServer, cfg)
+	shutdownGracefully(newInstanceEventConsumer, cfg)
 
 }
 
-func shutdownGracefully(consumer *kafka.ConsumerGroup, httpServer *server.Server, cfg *config.Config) {
+func shutdownGracefully(consumer *kafka.ConsumerGroup, cfg *config.Config) {
 	log.Info("Attempting graceful shut down...", nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
@@ -132,10 +115,7 @@ func shutdownGracefully(consumer *kafka.ConsumerGroup, httpServer *server.Server
 		log.Error(err, nil)
 	}
 
-	err = httpServer.Shutdown(ctx)
-	if err != nil {
-		log.Error(err, nil)
-	}
+	healthcheck.Shutdown(ctx)
 
 	cancel()
 	log.Info("Gracefully shut down application", nil)
