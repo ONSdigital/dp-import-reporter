@@ -1,4 +1,4 @@
-package errorModel
+package model
 
 import "time"
 

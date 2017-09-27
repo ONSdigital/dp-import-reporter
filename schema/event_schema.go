@@ -1,4 +1,4 @@
-package errorschema
+package schema
 
 import "github.com/ONSdigital/go-ns/avro"
 
@@ -12,6 +12,6 @@ var reportedEvent = `{
   ]
 }`
 
-var ReportedEventSchema *avro.Schema = &avro.Schema{
+var ReportEventSchema *avro.Schema = &avro.Schema{
 	Definition: reportedEvent,
 }

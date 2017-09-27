@@ -9,18 +9,6 @@
 			"revisionTime": "2017-07-28T08:24:17Z"
 		},
 		{
-			"checksumSHA1": "qzj4ooLm2zwMrJSg1+8lpwol8qs=",
-			"path": "github.com/ONSdigital/go-ns/errorhandler/models",
-			"revision": "f12d81c61fe2646a7c920436b521ac4016006a04",
-			"revisionTime": "2017-09-22T09:03:00Z"
-		},
-		{
-			"checksumSHA1": "gTuzlcXDi20vqpm0pbDIxOOd7pY=",
-			"path": "github.com/ONSdigital/go-ns/errorhandler/schema",
-			"revision": "f12d81c61fe2646a7c920436b521ac4016006a04",
-			"revisionTime": "2017-09-22T09:03:00Z"
-		},
-		{
 			"checksumSHA1": "J9OiPnhPHFPhQ+R+dq6LFj+dTxE=",
 			"path": "github.com/ONSdigital/go-ns/handlers/requestID",
 			"revision": "48e311b80e5efddd01347f9f398cf8963313b861",

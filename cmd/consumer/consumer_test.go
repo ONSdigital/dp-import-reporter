@@ -1,22 +1,8 @@
 package main
 
-import (
-	"testing"
-
-	"github.com/ONSdigital/dp-import-reporter/config"
-	"github.com/ONSdigital/go-ns/errorhandler/models"
-
-	"github.com/ONSdigital/go-ns/errorhandler/schema"
-
-	"github.com/ONSdigital/go-ns/kafka"
-	"github.com/ONSdigital/go-ns/log"
-
-	. "github.com/smartystreets/goconvey/convey"
-)
-
 //TODO all the commented out sections need to be mocked/ part of the mocking process
 
-type kafkaMsg struct {
+/*type kafkaMsg struct {
 	myBytes []byte
 	commitI int
 }
@@ -94,4 +80,4 @@ func TestInit(t *testing.T) {
 // 		newInstanceEventConsumer.Errors() <- errors.New("AN ERROR")
 //
 // 	})
-// }
+// }*/
