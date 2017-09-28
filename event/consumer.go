@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type HandleEvent func(event kafka.Message)
+type HandleEvent func(event kafka.Message) error
 
 type EventConsumer struct {
 	closed      chan bool

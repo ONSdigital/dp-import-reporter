@@ -12,7 +12,8 @@ import (
 	"io/ioutil"
 	"bytes"
 	"errors"
-	"reflect"
+	"strings"
+	"fmt"
 )
 
 const (
@@ -22,29 +23,22 @@ const (
 )
 
 var (
+	event = &model.Event{
+		Message:       "Error",
+		Type:          "Error",
+		MessageOffset: "0",
+	}
+
 	validInstance = &model.Instance{
-		State: "RED",
-		Events: []*model.InstanceEvent{
-			{
-				Message:       "Error",
-				Type:          "Error",
-				MessageOffset: "99",
-			},
-		},
+		State:  "RED",
+		Events: []*model.Event{event},
 	}
 )
 
 func TestDatasetAPIClient_GetInstance(t *testing.T) {
 	Convey("Given a correctly configured DatasetAPIClient", t, func() {
 		body, _ := json.Marshal(validInstance)
-		respBodyReader, _, httpClient := setup(body, http.StatusOK)
-
-		cli := &DatasetAPIClient{
-			host:           host,
-			authToken:      auth,
-			responseReader: respBodyReader,
-			httpClient:     httpClient,
-		}
+		respBodyReader, _, httpClient, cli := setup(body, http.StatusOK)
 
 		Convey("When GetInstance is called with valid parameters", func() {
 			i, err := cli.GetInstance(testInstanceID)
@@ -57,7 +51,6 @@ func TestDatasetAPIClient_GetInstance(t *testing.T) {
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				So(len(httpClient.DoCalls()), ShouldEqual, 1)
 				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader.Read is called 1 time with the expected parameters", func() {
@@ -71,17 +64,11 @@ func TestDatasetAPIClient_GetInstance_HttpCliErr(t *testing.T) {
 	Convey("Given httpClient.Do returns an error", t, func() {
 
 		body, _ := json.Marshal(validInstance)
-		respBodyReader, _, httpClient := setup(body, http.StatusOK)
+		respBodyReader, _, httpClient, cli := setup(body, http.StatusOK)
+		httpCliErr := errors.New("Boom!")
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
-			return nil, errors.New("Boom!")
-		}
-
-		cli := &DatasetAPIClient{
-			host:           host,
-			authToken:      auth,
-			responseReader: respBodyReader,
-			httpClient:     httpClient,
+			return nil, httpCliErr
 		}
 
 		Convey("When GetInstance is invoked", func() {
@@ -90,7 +77,7 @@ func TestDatasetAPIClient_GetInstance_HttpCliErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("Boom!"))
+				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, httpCliErr))
 			})
 
 			Convey("And responseBodyReader is never invoked", func() {
@@ -104,18 +91,10 @@ func TestDatasetAPIClient_GetInstance_HttpStatus(t *testing.T) {
 	Convey("Given httpClient.Do returns an non 200 status", t, func() {
 
 		body, _ := json.Marshal(validInstance)
-		respBodyReader, response, httpClient := setup(body, http.StatusOK)
-		response.StatusCode = http.StatusBadRequest
+		respBodyReader, response, httpClient, cli := setup(body, http.StatusBadRequest)
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
 			return response, nil
-		}
-
-		cli := &DatasetAPIClient{
-			host:           host,
-			authToken:      auth,
-			responseReader: respBodyReader,
-			httpClient:     httpClient,
 		}
 
 		Convey("When GetInstance is invoked", func() {
@@ -124,7 +103,7 @@ func TestDatasetAPIClient_GetInstance_HttpStatus(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("unexpected status code returned from dataset cli"))
+				So(err, ShouldResemble, newDatasetAPIError(unexpectedHTTPStatus))
 			})
 
 			Convey("And responseBodyReader is never invoked", func() {
@@ -138,20 +117,15 @@ func TestDatasetAPIClient_GetInstance_ResponseBodyReadErr(t *testing.T) {
 	Convey("Given responseBodyReader returns an error", t, func() {
 
 		body, _ := json.Marshal(validInstance)
-		respBodyReader, response, httpClient := setup(body, http.StatusOK)
+		readBodyErr := errors.New("Bork!")
+
+		respBodyReader, response, httpClient, cli := setup(body, http.StatusOK)
 		respBodyReader.ReadFunc = func(r io.Reader) ([]byte, error) {
-			return nil, errors.New("Bork!")
+			return nil, readBodyErr
 		}
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
 			return response, nil
-		}
-
-		cli := &DatasetAPIClient{
-			host:           host,
-			authToken:      auth,
-			responseReader: respBodyReader,
-			httpClient:     httpClient,
 		}
 
 		Convey("When GetInstance is invoked", func() {
@@ -160,7 +134,7 @@ func TestDatasetAPIClient_GetInstance_ResponseBodyReadErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("Bork!"))
+				So(err, ShouldResemble, wrappedDatasetAPIError(readResponseBodyErr, readBodyErr))
 			})
 
 			Convey("And responseBodyReader is called 1 time with the expected parameters", func() {
@@ -175,17 +149,10 @@ func TestDatasetAPIClient_GetInstance_UnmarshallErr(t *testing.T) {
 	Convey("Given unmarshalling the response body returns an error", t, func() {
 
 		body := []byte("This is not a valid response")
-		respBodyReader, response, httpClient := setup(body, http.StatusOK)
+		respBodyReader, response, httpClient, cli := setup(body, http.StatusOK)
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
 			return response, nil
-		}
-
-		cli := &DatasetAPIClient{
-			host:           host,
-			authToken:      auth,
-			responseReader: respBodyReader,
-			httpClient:     httpClient,
 		}
 
 		Convey("When GetInstance is invoked", func() {
@@ -194,10 +161,8 @@ func TestDatasetAPIClient_GetInstance_UnmarshallErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-
-				expectedType := reflect.TypeOf((*json.SyntaxError)(nil))
-				actualType := reflect.TypeOf(err)
-				So(actualType, ShouldEqual, expectedType)
+				So(err, ShouldNotBeNil)
+				So(strings.Contains(err.Error(), unmarshalResponseErr), ShouldBeTrue)
 			})
 
 			Convey("And responseBodyReader is called 1 time with the expected parameters", func() {
@@ -208,8 +173,192 @@ func TestDatasetAPIClient_GetInstance_UnmarshallErr(t *testing.T) {
 	})
 }
 
+func TestDatasetAPIClient_AddEventToInstance_invalidParams(t *testing.T) {
+	Convey("Given instanceID is empty", t, func() {
+		_, _, httpClient, cli := setup(nil, http.StatusOK)
+
+		Convey("When AddEventToInstance is called", func() {
+			err := cli.AddEventToInstance("", nil)
+
+			Convey("Then the DatasetAPI returns the expected error", func() {
+				So(err, ShouldResemble, newDatasetAPIError(instanceIDNil))
+			})
+
+			Convey("And httpClient.Do is never called", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 0)
+			})
+		})
+	})
+
+	Convey("Given event is nil", t, func() {
+		_, _, httpClient, cli := setup(nil, http.StatusOK)
+
+		Convey("When AddEventToInstance is called", func() {
+			err := cli.AddEventToInstance(testInstanceID, nil)
+
+			Convey("Then the DatasetAPI returns the expected error", func() {
+				So(err, ShouldResemble, newDatasetAPIError(eventNil))
+			})
+
+			Convey("And httpClient.Do is never called", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 0)
+			})
+		})
+	})
+}
+
+func TestDatasetAPIClient_AddEventToInstance_HttpCliErr(t *testing.T) {
+	Convey("Given datasetAPIClient has been configured correctly", t, func() {
+		_, _, httpClient, cli := setup(nil, http.StatusOK)
+
+		httpCliErr := errors.New("Wubba dubba dub dub")
+		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
+			return nil, httpCliErr
+		}
+
+		Convey("When httpClient.Do returns an error", func() {
+			err := cli.AddEventToInstance(testInstanceID, event)
+
+			Convey("Then the expected error is returned", func() {
+				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, httpCliErr))
+			})
+
+			Convey("And httpClient.Do is called 1 time", func() {
+				calls := httpClient.DoCalls()
+				So(len(calls), ShouldEqual, 1)
+				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
+			})
+		})
+	})
+}
+
+func TestDatasetAPIClient_AddEventToInstance_UnexpectedStatus(t *testing.T) {
+	Convey("Given datasetAPIClient has been configured correctly", t, func() {
+		_, _, httpClient, cli := setup(nil, http.StatusBadRequest)
+
+		Convey("When the returned HTTP status is not 201 CREATED", func() {
+
+			err := cli.AddEventToInstance(testInstanceID, event)
+
+			Convey("Then the expected error is returned", func() {
+				So(err, ShouldResemble, newDatasetAPIError(unexpectedHTTPStatus))
+			})
+
+			Convey("And httpClient.Do is called 1 time", func() {
+				calls := httpClient.DoCalls()
+				So(len(calls), ShouldEqual, 1)
+				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
+			})
+		})
+	})
+}
+
+func TestDatasetAPIClient_AddEventToInstance(t *testing.T) {
+	Convey("Given datasetAPIClient has been configured correctly", t, func() {
+		_, _, httpClient, cli := setup(nil, http.StatusCreated)
+
+		Convey("When AddEventToInstance is called", func() {
+			err := cli.AddEventToInstance(testInstanceID, event)
+
+			Convey("Then no error is returned", func() {
+				So(err, ShouldBeNil)
+			})
+
+			Convey("And httpClient.Do is called 1 time", func() {
+				calls := httpClient.DoCalls()
+				So(len(calls), ShouldEqual, 1)
+				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
+			})
+		})
+	})
+}
+
+func TestDatasetAPIClient_UpdateInstanceStatus_InvalidParams(t *testing.T) {
+	Convey("Given datasetAPIClient has been configured correctly", t, func() {
+		_, _, httpClient, cli := setup(nil, 0)
+
+		Convey("When UpdateInstanceStatus is called with an empty instanceID", func() {
+			err := cli.UpdateInstanceStatus("", nil)
+
+			Convey("Then the expected error is returned", func() {
+				So(err, ShouldResemble, newDatasetAPIError(instanceIDNil))
+			})
+
+			Convey("And httpClient.Do is never invoked", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 0)
+			})
+		})
+
+		Convey("When UpdateInstanceStatus is called with an nil state", func() {
+			err := cli.UpdateInstanceStatus(testInstanceID, nil)
+
+			Convey("Then the expected error is returned", func() {
+				So(err, ShouldResemble, newDatasetAPIError(stateNil))
+			})
+
+			Convey("And httpClient.Do is never invoked", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 0)
+			})
+		})
+	})
+}
+
+func TestDatasetAPIClient_UpdateInstanceStatus(t *testing.T) {
+	Convey("Given datasetAPIClient has been configured correctly", t, func() {
+		_, response, httpClient, cli := setup(nil, http.StatusOK)
+
+		Convey("When UpdateInstanceStatus is called", func() {
+			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
+
+			Convey("Then no error is returned", func() {
+				So(err, ShouldBeNil)
+			})
+
+			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+				calls := httpClient.DoCalls()
+				So(len(calls), ShouldEqual, 1)
+				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
+			})
+		})
+
+		Convey("When httpClient.Do returns an error", func() {
+			httpCliDoErr := errors.New("Bork!")
+			httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
+				return nil, httpCliDoErr
+			}
+			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
+
+			Convey("Then the expected error is returned", func() {
+				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, httpCliDoErr))
+			})
+
+			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+				calls := httpClient.DoCalls()
+				So(len(calls), ShouldEqual, 1)
+				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
+			})
+		})
+
+		Convey("When httpClient.Do returns an incorrect HTTP status", func() {
+			response.StatusCode = http.StatusBadRequest
+			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
+
+			Convey("Then the expected error is returned", func() {
+				So(err, ShouldResemble, newDatasetAPIError(unexpectedHTTPStatus))
+			})
+
+			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+				calls := httpClient.DoCalls()
+				So(len(calls), ShouldEqual, 1)
+				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
+			})
+
+		})
+	})
+}
+
 func TestNewDatasetAPIClient(t *testing.T) {
-	responseBodyReader, _, httpClient := setup([]byte{}, http.StatusOK)
+	responseBodyReader, _, httpClient, _ := setup([]byte{}, http.StatusOK)
 
 	Convey("Given an invalid host", t, func() {
 
@@ -219,7 +368,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("datasetAPIClient requires a non empty host"))
+				So(err, ShouldResemble, newDatasetAPIError(hostEmpty))
 			})
 		})
 	})
@@ -232,7 +381,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("datasetAPIClient requires a non empty authToken"))
+				So(err, ShouldResemble, newDatasetAPIError(authTokenEmpty))
 			})
 		})
 	})
@@ -245,7 +394,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("datasetAPIClient requires a non nil HttpClient"))
+				So(err, ShouldResemble, newDatasetAPIError(httpClientNil))
 			})
 		})
 	})
@@ -258,7 +407,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("datasetAPIClient requires a non nil ResponseBodyReader"))
+				So(err, ShouldResemble, newDatasetAPIError(responseBodyReaderNil))
 			})
 		})
 	})
@@ -280,7 +429,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 	})
 }
 
-func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Response, *mocks.HttpClientMock) {
+func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Response, *mocks.HttpClientMock, *DatasetAPIClient) {
 	reader := bytes.NewReader(body)
 	readeCloser := ioutil.NopCloser(reader)
 
@@ -301,5 +450,11 @@ func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Respon
 		},
 	}
 
-	return respBodyReader, response, httpClient
+	cli := &DatasetAPIClient{
+		host:           host,
+		authToken:      auth,
+		responseReader: respBodyReader,
+		httpClient:     httpClient,
+	}
+	return respBodyReader, response, httpClient, cli
 }

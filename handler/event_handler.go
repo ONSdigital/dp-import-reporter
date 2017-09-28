@@ -1,201 +1,123 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"net/http"
-	"net/url"
-	"reflect"
 	"time"
-	"github.com/ONSdigital/dp-import-reporter/config"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/coocood/freecache"
-	"github.com/ONSdigital/dp-import-reporter/client"
 	"github.com/ONSdigital/dp-import-reporter/model"
+	"encoding/json"
 )
 
-const failed = "failed"
+//go:generate moq -out ../mocks/handler_generated_mocks.go -pkg mocks . DatasetAPICli Cache
 
-var DatasetAPI *client.DatasetAPIClient
+const (
+	failed                    = "failed"
+	errorType                 = "error"
+	datasetAPIGetInstErr      = "datasetAPI.GetInstance return an error"
+	datasetAPIAddEventErr     = "datasetAPI.AddEventToInstance return an error"
+	datasetAPIUpdateStatusErr = "datasetAPI.UpdateInstanceStatus return an error"
+	eventNotInCache           = "reportEvent not found in cache, checking dataset API"
+	eventNotInInstance        = "event not found in instance.events, updating dataset api"
+	updatingDSInstance        = "updating dataset api to set instance.status to failed"
+	addingToLocalCache        = "adding reportEvent to local cache"
+	updatingCacheTimeout      = "reportEvent found in cache, updating cache expiry time"
+	handlingEvent             = "Handling report event"
+	reportEventKey            = "reportEvent"
+)
 
-//main function that triggers everything else
-func HandleEvent(c *freecache.Cache, cfg *config.Config, e *model.EventReport) error {
-	log.Info("Starting error handle", log.Data{"INSTANCE_ID": e.InstanceID, "ERROR_MSG": e.EventMsg})
+var (
+	statusFailed = &model.State{State: failed}
+)
 
-	instance, err := DatasetAPI.GetInstance(e.InstanceID)
+type DatasetAPICli interface {
+	GetInstance(instanceID string) (*model.Instance, error)
+	AddEventToInstance(instanceID string, e *model.Event) error
+	UpdateInstanceStatus(instanceID string, state *model.State) error
+}
+
+type Cache interface {
+	Get(key []byte) (value []byte, err error)
+	Set(key, value []byte, expireSeconds int) (err error)
+	Del(key []byte) (affected bool)
+	TTL(key []byte) (timeLeft uint32, err error)
+}
+
+type ReportEventHandler struct {
+	DatasetAPI    DatasetAPICli
+	Cache         Cache
+	ExpireSeconds int
+}
+
+func (r ReportEventHandler) HandleEvent(e *model.ReportEvent) error {
+	logDetails := log.Data{reportEventKey: e}
+	log.Info(handlingEvent, logDetails)
+
+	key, value, err := generateCacheKey(e)
 	if err != nil {
 		return err
 	}
-	log.Info("Successfully checked instance", log.Data{
-		"instanceID":     e.InstanceID,
-		"instance_state": instance.State,
-	})
 
-	instanceEvents := &model.InstanceEvent{
-		Type:          e.EventType,
-		Message:       e.EventMsg,
-		MessageOffset: "0",
-	}
-
-	timeNow := time.Now()
-
-	jsonUpload, err := json.Marshal(model.Event{
-		Type:          e.EventType,
-		Time:          &timeNow,
-		Message:       e.EventMsg,
-		MessageOffset: "0",
-	})
-
-	key := []byte(e.InstanceID)
-	value := []byte(e.EventMsg)
-	expire := 25
-
-	check := arraySlicing(instanceEvents, instance.Events)
-	if check {
-		_, err := c.Get(key)
+	// err != nil means not in cache.
+	if _, err := r.Cache.Get(key); err != nil {
+		log.Info(eventNotInCache, logDetails)
+		i, err := r.DatasetAPI.GetInstance(e.InstanceID)
 		if err != nil {
-			c.Set(key, value, expire)
-		} else {
-			c.Del(key)
-		}
-	}
-
-	got, err := c.Get(key)
-	if err != nil {
-		c.Set(key, value, expire)
-		err := insertEvent(jsonUpload, cfg, instance.State, e)
-		if err != nil {
+			log.ErrorC(datasetAPIGetInstErr, err, logDetails)
 			return err
 		}
+
+		timeNow := time.Now()
+		newEvent := &model.Event{
+			Type:          e.EventType,
+			Time:          &timeNow,
+			Message:       e.EventMsg,
+			MessageOffset: "0",
+		}
+
+		if !i.ContainsEvent(newEvent) {
+			log.Info(eventNotInInstance, logDetails)
+
+			if err := r.DatasetAPI.AddEventToInstance(i.InstanceID, newEvent); err != nil {
+				log.ErrorC(datasetAPIAddEventErr, err, logDetails)
+				return err
+			}
+			if e.EventType == errorType && i.State != failed {
+				log.Info(updatingDSInstance, logDetails)
+
+				if err := r.DatasetAPI.UpdateInstanceStatus(i.InstanceID, statusFailed); err != nil {
+					log.ErrorC(datasetAPIUpdateStatusErr, err, logDetails)
+					return err
+				}
+			}
+		}
+
+		log.Info(addingToLocalCache, logDetails)
+		r.Cache.Set(key, value, r.ExpireSeconds)
 		return nil
 	}
-	log.Info("This instance is saved in memory already.", log.Data{e.InstanceID: "this instance is saved inmemory", "lock": got})
+	// It is in the cache so reset the time to live.
+	ttl, _ := r.Cache.TTL(key)
+	logDetails["key"] = key
+	logDetails["TTL"] = ttl
+	log.Info(updatingCacheTimeout, logDetails)
+	r.Cache.Del(key)
+	r.Cache.Set(key, value, r.ExpireSeconds)
 	return nil
 }
 
-/*this puts an event into the database under the instance you chose
-it does some checks to make sure the instance exists and checks the status
-if the status isn't already failed it will turn that instance to failed */
-func insertEvent(json []byte, cfg *config.Config, status string, e *model.EventReport) error {
-
-	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID + "/events"
-
-	URL, err := urlParser(path)
-	if err != nil || URL == nil {
-		return err
+func generateCacheKey(r *model.ReportEvent) (key []byte, value []byte, err error) {
+	cacheKey := model.CacheKey{
+		InstanceID: r.InstanceID,
+		EventType:  r.EventType,
+		Service:    "TODO",
 	}
 
-	res, err := apiRequests(URL, "POST", json, cfg)
+	key, err = json.Marshal(cacheKey)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	if e.EventType == "error" && status != failed {
-		err := putJobStatus(cfg, e)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = responseStatus(res.StatusCode)
+	value, err = json.Marshal(r)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	return nil
-}
-
-// This will put a error status in the state
-func putJobStatus(cfg *config.Config, e *model.EventReport) error {
-
-	path := cfg.DatasetAPIURL + "/instances/" + e.InstanceID
-
-	URL, err := urlParser(path)
-	if err != nil || URL == nil {
-		return err
-	}
-
-	log.Info("Attempting to marshal state...", nil)
-	jsonUpload, err := json.Marshal(&model.State{
-		State: failed,
-	})
-
-	if err != nil {
-		log.ErrorC("Unsuccessful marshal of state", err, nil)
-		return err
-	}
-	log.Info("Successfully marshaled state", nil)
-
-	res, err := apiRequests(URL, "PUT", jsonUpload, cfg)
-	if err != nil {
-		return err
-	}
-	err = responseStatus(res.StatusCode)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func apiRequests(URL *url.URL, request string, jsonUpload []byte, cfg *config.Config) (*http.Response, error) {
-	log.Info("Attempting request", log.Data{"REQUESTED_URL": URL.String(), "REQUEST_METHOD": request})
-	req, err := http.NewRequest(request, URL.String(), bytes.NewBuffer(jsonUpload))
-	if err != nil {
-		log.ErrorC("Unsuccessful making request", err, log.Data{"REQUESTED_URL": URL.String()})
-		return nil, err
-	}
-
-	req.Header.Set("Internal-token", cfg.ImportAuthToken)
-	log.Info("Token set... Requesting httpclient...", nil)
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		log.ErrorC("Error requesting httpclient", err, nil)
-		return nil, err
-	}
-	log.Info("Successfully requested httpclient", nil)
-
-	defer res.Body.Close()
-
-	return res, nil
-}
-func urlParser(path string) (*url.URL, error) {
-	var url *url.URL
-	log.Info("Attempting parsing path: "+path, nil)
-
-	url, err := url.Parse(path)
-	if err != nil {
-		log.ErrorC("Unsuccessful parsing of path", err, nil)
-		return nil, err
-	}
-	log.Info("Successfully parsed path", log.Data{"URL": url.String()})
-	return url, nil
-}
-
-func responseStatus(statusCode int) error {
-	switch statusCode {
-	case 200, 201:
-		log.Info("Successfully connection", log.Data{"Status code": statusCode})
-		return nil
-	case 400:
-		log.Info("Bad client request", log.Data{"Status code": statusCode})
-		return errors.New("JSON was incorrect")
-	case 401:
-		log.Info("Unauthorised access", log.Data{"Status code": statusCode})
-		return errors.New("Unauthorised access")
-	case 404:
-		log.Info("Could not find instance", log.Data{"Status code": statusCode})
-		return errors.New("Could not find instance")
-	default:
-		log.Info("Unrecoginsed error", log.Data{"Status code": statusCode})
-		return errors.New("Unrecoginsed error")
-	}
-}
-
-func arraySlicing(a *model.InstanceEvent, event []*model.InstanceEvent) bool {
-	for _, b := range event {
-		if reflect.DeepEqual(*a, *b) {
-			return true
-		}
-	}
-	return false
+	return key, value, err
 }

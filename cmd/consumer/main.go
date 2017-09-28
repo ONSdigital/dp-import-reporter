@@ -46,10 +46,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	cache := freecache.NewCache(cfg.CacheSize)
-	// TODO why is this set?
-	debug.SetGCPercent(20)
-
 	// run the health check http server.
 	healthcheck.NewHandler(cfg.BindAddress, errorChannel)
 
@@ -59,7 +55,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	handler.DatasetAPI = datasetAPIClient
+	reportEventHandler := handler.ReportEventHandler{
+		Cache:      freecache.NewCache(cfg.CacheSize),
+		DatasetAPI: datasetAPIClient,
+		ExpireSeconds: 60,
+	}
+	// TODO why is this set?
+	debug.SetGCPercent(20)
 
 	// create the report event kafka consumer.
 	consumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
@@ -67,18 +69,20 @@ func main() {
 		logFatal("could not obtain consumer", err, nil)
 	}
 
+	// TODO move this into an interface
 	// what to do with a report event.
-	handleEvent := func(eventMsg kafka.Message) {
-		var reportEvent model.EventReport
+	handleEvent := func(eventMsg kafka.Message) error {
+		var reportEvent model.ReportEvent
 		if err := schema.ReportEventSchema.Unmarshal(eventMsg.GetData(), &reportEvent); err != nil {
 			log.ErrorC("failed to unmarshal message", err, log.Data{"topic": cfg.NewInstanceTopic})
-			return
+			return err
 		}
 
-		if err := handler.HandleEvent(cache, cfg, &reportEvent); err != nil {
+		if err := reportEventHandler.HandleEvent(&reportEvent); err != nil {
 			log.ErrorC("Failure updating events", err, log.Data{"topic": cfg.NewInstanceTopic})
-			return
+			return err
 		}
+		return nil
 	}
 
 	// create event consumer.
