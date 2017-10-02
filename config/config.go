@@ -15,6 +15,7 @@ type Config struct {
 	ImportAuthToken         string        `envconfig:"IMPORT_AUTH_TOKEN"`
 	BindAddress             string        `envconfig:"BIND_ADDR"`
 	CacheSize               int           `envconfig:"CACHE_SIZE"`
+	CacheExpiry             int           `envconfig:"CACHE_EXPIRY"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 }
 
@@ -33,6 +34,7 @@ func Get() (*Config, error) {
 		ImportAuthToken:         "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:             ":22200",
 		CacheSize:               100 * 1024 * 1024,
+		CacheExpiry:             60,
 		GracefulShutdownTimeout: time.Second * 5,
 	}
 

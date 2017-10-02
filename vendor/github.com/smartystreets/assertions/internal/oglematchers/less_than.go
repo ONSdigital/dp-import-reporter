@@ -110,7 +110,7 @@ func (m *lessThanMatcher) Matches(c interface{}) (err error) {
 
 	err = errors.New("")
 
-	// Handle strings as a special case.
+	// ProcessMessage strings as a special case.
 	if v1.Kind() == reflect.String && v2.Kind() == reflect.String {
 		if v1.String() < v2.String() {
 			err = nil
@@ -126,7 +126,7 @@ func (m *lessThanMatcher) Matches(c interface{}) (err error) {
 		return
 	}
 
-	// Handle the various comparison cases.
+	// ProcessMessage the various comparison cases.
 	switch {
 	// Both integers
 	case isInteger(v1) && isInteger(v2):

@@ -8,7 +8,8 @@ var reportedEvent = `{
   "fields": [
     {"name": "instance_id", "type": "string"},
     {"name": "event_type", "type": "string"},
-    {"name": "event_message", "type": "string"}
+    {"name": "event_message", "type": "string"},
+    {"name": "service_name", "type": "string"}
   ]
 }`
 

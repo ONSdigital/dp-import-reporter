@@ -8,31 +8,17 @@ import (
 	"syscall"
 
 	"github.com/ONSdigital/dp-import-reporter/config"
-	"github.com/ONSdigital/dp-import-reporter/handler"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/coocood/freecache"
-	"github.com/ONSdigital/dp-import-reporter/healthcheck"
 	"github.com/ONSdigital/dp-import-reporter/event"
 	"github.com/ONSdigital/dp-import-reporter/client"
-	"github.com/ONSdigital/dp-import-reporter/model"
 	"net/http"
 	"io/ioutil"
 	"io"
-	"github.com/ONSdigital/dp-import-reporter/schema"
+	"github.com/ONSdigital/dp-import-reporter/server"
+	"github.com/ONSdigital/dp-import-reporter/message"
 )
-
-// logFatal is a utility method for a common failure pattern in main()
-func logFatal(context string, err error, data log.Data) {
-	log.ErrorC(context, err, data)
-	os.Exit(1)
-}
-
-type ResponseBodyReader struct{}
-
-func (r ResponseBodyReader) Read(reader io.Reader) ([]byte, error) {
-	return ioutil.ReadAll(reader)
-}
 
 func main() {
 	log.Namespace = "dp-event-reporter"
@@ -46,70 +32,65 @@ func main() {
 		os.Exit(1)
 	}
 
-	// run the health check http server.
-	healthcheck.NewHandler(cfg.BindAddress, errorChannel)
-
 	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.DatasetAPIURL, cfg.ImportAuthToken, &http.Client{}, ResponseBodyReader{})
 	if err != nil {
-		// TODO
 		os.Exit(1)
 	}
 
-	reportEventHandler := handler.ReportEventHandler{
-		Cache:      freecache.NewCache(cfg.CacheSize),
-		DatasetAPI: datasetAPIClient,
-		ExpireSeconds: 60,
-	}
+	cache := freecache.NewCache(cfg.CacheSize)
 	// TODO why is this set?
 	debug.SetGCPercent(20)
 
-	// create the report event kafka consumer.
-	consumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
+	server.Start(cache, cfg.BindAddress, errorChannel)
+
+	reportEventHandler := event.Handler{
+		Cache:         cache,
+		DatasetAPI:    datasetAPIClient,
+		ExpireSeconds: cfg.CacheExpiry,
+	}
+
+	eventReceiver := &event.Receiver{
+		Handler: reportEventHandler,
+	}
+
+	// create the report event kafka kafkaConsumer.
+	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
 	if err != nil {
-		logFatal("could not obtain consumer", err, nil)
+		log.ErrorC("unexpected error while attempting to create kafka kafkaConsumer", err, nil)
+		os.Exit(1)
 	}
 
-	// TODO move this into an interface
-	// what to do with a report event.
-	handleEvent := func(eventMsg kafka.Message) error {
-		var reportEvent model.ReportEvent
-		if err := schema.ReportEventSchema.Unmarshal(eventMsg.GetData(), &reportEvent); err != nil {
-			log.ErrorC("failed to unmarshal message", err, log.Data{"topic": cfg.NewInstanceTopic})
-			return err
-		}
-
-		if err := reportEventHandler.HandleEvent(&reportEvent); err != nil {
-			log.ErrorC("Failure updating events", err, log.Data{"topic": cfg.NewInstanceTopic})
-			return err
-		}
-		return nil
-	}
-
-	// create event consumer.
-	reportEventConsumer := event.NewEventConsumer(consumer, handleEvent)
+	// create event kafkaConsumer.
+	reportEventConsumer := message.NewMessageConsumer(kafkaConsumer, eventReceiver)
 	reportEventConsumer.Listen()
 
 	// shutdown all the things.
 	gracefulShutdown := func() {
-		log.Info("Attempting graceful shutdown...", nil)
+		log.Info("Attempting graceful shutdown of service", nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
 		defer cancel()
 
-		healthcheck.Shutdown(ctx)
+		server.Shutdown(ctx)
 		reportEventConsumer.Close(ctx)
-		consumer.Close(ctx)
+		kafkaConsumer.Close(ctx)
 	}
 
 	// block until shutdown event happens...
 	select {
 	case <-signals:
 		gracefulShutdown()
-	case err := <-consumer.Errors():
-		log.ErrorC("consumer error chan received error commencing graceful shutdown", err, nil)
+	case err := <-kafkaConsumer.Errors():
+		log.ErrorC("kafkaConsumer error chan received error commencing graceful shutdown", err, nil)
 		gracefulShutdown()
 	case err := <-errorChannel:
 		log.ErrorC("errors channel received error commencing graceful shutdown", err, nil)
 		gracefulShutdown()
 	}
+}
+
+type ResponseBodyReader struct{}
+
+func (r ResponseBodyReader) Read(reader io.Reader) ([]byte, error) {
+	return ioutil.ReadAll(reader)
 }

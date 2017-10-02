@@ -1,4 +1,4 @@
-package handler
+package event
 
 import (
 	"testing"
@@ -6,7 +6,6 @@ import (
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"errors"
-	"encoding/json"
 )
 
 var (
@@ -18,10 +17,11 @@ var (
 		State:      "pending",
 	}
 
-	event = &model.ReportEvent{
+	e = &model.ReportEvent{
 		InstanceID: testInstanceID,
 		EventMsg:   "Its all gone horribly wrong!",
 		EventType:  "error",
+		ServiceName: "myService",
 	}
 )
 
@@ -29,14 +29,14 @@ func TestHandleEvent_NotInCacheOrDatasetAPI(t *testing.T) {
 	Convey("Given the handle has been configured correctly", t, func() {
 		datasetAPI, cacheMock := setup()
 
-		reportEventHandler := ReportEventHandler{
+		reportEventHandler := Handler{
 			DatasetAPI:    datasetAPI,
 			Cache:         cacheMock,
 			ExpireSeconds: 60,
 		}
 
-		Convey("When handle is invoked with an event that's not in cacheMock or in the dataset instance.events", func() {
-			err := reportEventHandler.HandleEvent(event)
+		Convey("When handle is invoked with an e that's not in cacheMock or in the dataset instance.events", func() {
+			err := reportEventHandler.HandleEvent(e)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -50,8 +50,8 @@ func TestHandleEvent_NotInCacheOrDatasetAPI(t *testing.T) {
 				addCalls := datasetAPI.AddEventToInstanceCalls()
 				So(len(addCalls), ShouldEqual, 1)
 				So(addCalls[0].InstanceID, ShouldEqual, testInstanceID)
-				So(addCalls[0].E.Message, ShouldEqual, event.EventMsg)
-				So(addCalls[0].E.Type, ShouldEqual, event.EventType)
+				So(addCalls[0].E.Message, ShouldEqual, e.EventMsg)
+				So(addCalls[0].E.Type, ShouldEqual, e.EventType)
 				So(addCalls[0].E.MessageOffset, ShouldEqual, "0")
 
 				updateCalls := datasetAPI.UpdateInstanceStatusCalls()
@@ -62,9 +62,9 @@ func TestHandleEvent_NotInCacheOrDatasetAPI(t *testing.T) {
 			Convey("And the Cache is called as expected with the expected parameters", func() {
 				So(len(cacheMock.SetCalls()), ShouldEqual, 1)
 
-				expectedKey, _ := json.Marshal(event)
-				So(cacheMock.SetCalls()[0].Key, ShouldResemble, expectedKey)
-				So(cacheMock.SetCalls()[0].Value, ShouldResemble, expectedKey)
+				key, val, _ := e.GenCacheKeyAndValue()
+				So(cacheMock.SetCalls()[0].Key, ShouldResemble, key)
+				So(cacheMock.SetCalls()[0].Value, ShouldResemble, val)
 				So(cacheMock.SetCalls()[0].ExpireSeconds, ShouldResemble, 60)
 			})
 		})
@@ -79,7 +79,7 @@ func TestReportEventHandler_HandleEvent_EventInCache(t *testing.T) {
 	}
 
 	Convey("Given the reportEventHandler has been correctly configured", t, func() {
-		reportEventHandler := ReportEventHandler{
+		reportEventHandler := Handler{
 			DatasetAPI:    datasetAPI,
 			Cache:         cacheMock,
 			ExpireSeconds: 60,
@@ -87,8 +87,8 @@ func TestReportEventHandler_HandleEvent_EventInCache(t *testing.T) {
 
 		var handlerErrors error
 
-		Convey("When the cache contains the event being handled", func() {
-			handlerErrors = reportEventHandler.HandleEvent(event)
+		Convey("When the cache contains the e being handled", func() {
+			handlerErrors = reportEventHandler.HandleEvent(e)
 		})
 
 		Convey("Then no error is returned", func() {
@@ -102,17 +102,17 @@ func TestReportEventHandler_HandleEvent_EventInCache(t *testing.T) {
 		})
 
 		Convey("And the cache is called as expected with the correct parameters", func() {
-			expectedKey, _ := json.Marshal(event)
+			key, val, _ := e.GenCacheKeyAndValue()
 
 			So(len(cacheMock.DelCalls()), ShouldEqual, 1)
-			So(cacheMock.DelCalls()[0].Key, ShouldResemble, expectedKey)
+			So(cacheMock.DelCalls()[0].Key, ShouldResemble, key)
 
 			So(len(cacheMock.GetCalls()), ShouldEqual, 1)
-			So(cacheMock.GetCalls()[0].Key, ShouldResemble, expectedKey)
+			So(cacheMock.GetCalls()[0].Key, ShouldResemble, key)
 
 			So(len(cacheMock.SetCalls()), ShouldEqual, 1)
-			So(cacheMock.SetCalls()[0].Key, ShouldResemble, expectedKey)
-			So(cacheMock.SetCalls()[0].Value, ShouldResemble, expectedKey)
+			So(cacheMock.SetCalls()[0].Key, ShouldResemble, key)
+			So(cacheMock.SetCalls()[0].Value, ShouldResemble, val)
 			So(cacheMock.SetCalls()[0].ExpireSeconds, ShouldEqual, 60)
 		})
 	})
@@ -126,7 +126,7 @@ func setup() (*mocks.DatasetAPICliMock, *mocks.CacheMock) {
 		GetInstanceFunc: func(instanceID string) (*model.Instance, error) {
 			return instance, nil
 		},
-		UpdateInstanceStatusFunc: func(instanceID string, state model.State) error {
+		UpdateInstanceStatusFunc: func(instanceID string, state *model.State) error {
 			return nil
 		},
 	}, &mocks.CacheMock{
@@ -138,6 +138,9 @@ func setup() (*mocks.DatasetAPICliMock, *mocks.CacheMock) {
 		},
 		SetFunc: func(key []byte, value []byte, expireSeconds int) error {
 			return nil
+		},
+		TTLFunc: func(key []byte) (uint32, error) {
+			return 0, nil
 		},
 	}
 }

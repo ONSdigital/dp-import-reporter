@@ -26,13 +26,13 @@ func NewRouter() *Router {
 //     var router = mux.NewRouter()
 //
 //     func main() {
-//         http.Handle("/", router)
+//         http.ProcessMessage("/", router)
 //     }
 //
 // Or, for Google App Engine, register it in a init() function:
 //
 //     func init() {
-//         http.Handle("/", router)
+//         http.ProcessMessage("/", router)
 //     }
 //
 // This will send all incoming requests to the router.
@@ -214,7 +214,7 @@ func (r *Router) NewRoute() *Route {
 	return route
 }
 
-// Handle registers a new route with a matcher for the URL path.
+// ProcessMessage registers a new route with a matcher for the URL path.
 // See Route.Path() and Route.Handler().
 func (r *Router) Handle(path string, handler http.Handler) *Route {
 	return r.NewRoute().Path(path).Handler(handler)

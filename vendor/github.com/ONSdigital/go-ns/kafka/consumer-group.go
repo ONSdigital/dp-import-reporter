@@ -1,11 +1,11 @@
 package kafka
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
 	"context"
+	"errors"
 
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/bsm/sarama-cluster"

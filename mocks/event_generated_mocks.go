@@ -26,7 +26,7 @@ var (
 //             GetInstanceFunc: func(instanceID string) (*model.Instance, error) {
 // 	               panic("TODO: mock out the GetInstance method")
 //             },
-//             UpdateInstanceStatusFunc: func(instanceID string, state model.State) error {
+//             UpdateInstanceStatusFunc: func(instanceID string, state *model.State) error {
 // 	               panic("TODO: mock out the UpdateInstanceStatus method")
 //             },
 //         }
@@ -43,7 +43,7 @@ type DatasetAPICliMock struct {
 	GetInstanceFunc func(instanceID string) (*model.Instance, error)
 
 	// UpdateInstanceStatusFunc mocks the UpdateInstanceStatus method.
-	UpdateInstanceStatusFunc func(instanceID string, state model.State) error
+	UpdateInstanceStatusFunc func(instanceID string, state *model.State) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -64,7 +64,7 @@ type DatasetAPICliMock struct {
 			// InstanceID is the instanceID argument value.
 			InstanceID string
 			// State is the state argument value.
-			State model.State
+			State *model.State
 		}
 	}
 }
@@ -136,13 +136,13 @@ func (mock *DatasetAPICliMock) GetInstanceCalls() []struct {
 }
 
 // UpdateInstanceStatus calls UpdateInstanceStatusFunc.
-func (mock *DatasetAPICliMock) UpdateInstanceStatus(instanceID string, state model.State) error {
+func (mock *DatasetAPICliMock) UpdateInstanceStatus(instanceID string, state *model.State) error {
 	if mock.UpdateInstanceStatusFunc == nil {
 		panic("moq: DatasetAPICliMock.UpdateInstanceStatusFunc is nil but DatasetAPICli.UpdateInstanceStatus was just called")
 	}
 	callInfo := struct {
 		InstanceID string
-		State      model.State
+		State      *model.State
 	}{
 		InstanceID: instanceID,
 		State:      state,
@@ -158,11 +158,11 @@ func (mock *DatasetAPICliMock) UpdateInstanceStatus(instanceID string, state mod
 //     len(mockedDatasetAPICli.UpdateInstanceStatusCalls())
 func (mock *DatasetAPICliMock) UpdateInstanceStatusCalls() []struct {
 	InstanceID string
-	State      model.State
+	State      *model.State
 } {
 	var calls []struct {
 		InstanceID string
-		State      model.State
+		State      *model.State
 	}
 	lockDatasetAPICliMockUpdateInstanceStatus.RLock()
 	calls = mock.calls.UpdateInstanceStatus
@@ -174,6 +174,7 @@ var (
 	lockCacheMockDel sync.RWMutex
 	lockCacheMockGet sync.RWMutex
 	lockCacheMockSet sync.RWMutex
+	lockCacheMockTTL sync.RWMutex
 )
 
 // CacheMock is a mock implementation of Cache.
@@ -191,6 +192,9 @@ var (
 //             SetFunc: func(key []byte, value []byte, expireSeconds int) error {
 // 	               panic("TODO: mock out the Set method")
 //             },
+//             TTLFunc: func(key []byte) (uint32, error) {
+// 	               panic("TODO: mock out the TTL method")
+//             },
 //         }
 //
 //         // TODO: use mockedCache in code that requires Cache
@@ -206,6 +210,9 @@ type CacheMock struct {
 
 	// SetFunc mocks the Set method.
 	SetFunc func(key []byte, value []byte, expireSeconds int) error
+
+	// TTLFunc mocks the TTL method.
+	TTLFunc func(key []byte) (uint32, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -227,6 +234,11 @@ type CacheMock struct {
 			Value []byte
 			// ExpireSeconds is the expireSeconds argument value.
 			ExpireSeconds int
+		}
+		// TTL holds details about calls to the TTL method.
+		TTL []struct {
+			// Key is the key argument value.
+			Key []byte
 		}
 	}
 }
@@ -329,5 +341,100 @@ func (mock *CacheMock) SetCalls() []struct {
 	lockCacheMockSet.RLock()
 	calls = mock.calls.Set
 	lockCacheMockSet.RUnlock()
+	return calls
+}
+
+// TTL calls TTLFunc.
+func (mock *CacheMock) TTL(key []byte) (uint32, error) {
+	if mock.TTLFunc == nil {
+		panic("moq: CacheMock.TTLFunc is nil but Cache.TTL was just called")
+	}
+	callInfo := struct {
+		Key []byte
+	}{
+		Key: key,
+	}
+	lockCacheMockTTL.Lock()
+	mock.calls.TTL = append(mock.calls.TTL, callInfo)
+	lockCacheMockTTL.Unlock()
+	return mock.TTLFunc(key)
+}
+
+// TTLCalls gets all the calls that were made to TTL.
+// Check the length with:
+//     len(mockedCache.TTLCalls())
+func (mock *CacheMock) TTLCalls() []struct {
+	Key []byte
+} {
+	var calls []struct {
+		Key []byte
+	}
+	lockCacheMockTTL.RLock()
+	calls = mock.calls.TTL
+	lockCacheMockTTL.RUnlock()
+	return calls
+}
+
+var (
+	lockEventHandlerMockHandleEvent sync.RWMutex
+)
+
+// EventHandlerMock is a mock implementation of EventHandler.
+//
+//     func TestSomethingThatUsesEventHandler(t *testing.T) {
+//
+//         // make and configure a mocked EventHandler
+//         mockedEventHandler := &EventHandlerMock{
+//             HandleEventFunc: func(e *model.ReportEvent) error {
+// 	               panic("TODO: mock out the HandleEvent method")
+//             },
+//         }
+//
+//         // TODO: use mockedEventHandler in code that requires EventHandler
+//         //       and then make assertions.
+//
+//     }
+type EventHandlerMock struct {
+	// HandleEventFunc mocks the HandleEvent method.
+	HandleEventFunc func(e *model.ReportEvent) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// HandleEvent holds details about calls to the HandleEvent method.
+		HandleEvent []struct {
+			// E is the e argument value.
+			E *model.ReportEvent
+		}
+	}
+}
+
+// HandleEvent calls HandleEventFunc.
+func (mock *EventHandlerMock) HandleEvent(e *model.ReportEvent) error {
+	if mock.HandleEventFunc == nil {
+		panic("moq: EventHandlerMock.HandleEventFunc is nil but EventHandler.HandleEvent was just called")
+	}
+	callInfo := struct {
+		E *model.ReportEvent
+	}{
+		E: e,
+	}
+	lockEventHandlerMockHandleEvent.Lock()
+	mock.calls.HandleEvent = append(mock.calls.HandleEvent, callInfo)
+	lockEventHandlerMockHandleEvent.Unlock()
+	return mock.HandleEventFunc(e)
+}
+
+// HandleEventCalls gets all the calls that were made to HandleEvent.
+// Check the length with:
+//     len(mockedEventHandler.HandleEventCalls())
+func (mock *EventHandlerMock) HandleEventCalls() []struct {
+	E *model.ReportEvent
+} {
+	var calls []struct {
+		E *model.ReportEvent
+	}
+	lockEventHandlerMockHandleEvent.RLock()
+	calls = mock.calls.HandleEvent
+	lockEventHandlerMockHandleEvent.RUnlock()
 	return calls
 }

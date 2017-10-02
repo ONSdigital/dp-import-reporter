@@ -30,7 +30,7 @@ Let's start registering a couple of URL paths and handlers:
 		r.HandleFunc("/", HomeHandler)
 		r.HandleFunc("/products", ProductsHandler)
 		r.HandleFunc("/articles", ArticlesHandler)
-		http.Handle("/", r)
+		http.ProcessMessage("/", r)
 	}
 
 Here we register three routes mapping URL paths to handlers. This is
