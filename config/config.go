@@ -9,10 +9,10 @@ import (
 
 // Config struct to hold application configuration.
 type Config struct {
-	NewInstanceTopic        string        `envconfig:"CONSUMER_TOPIC"`
+	ReportEventTopic        string        `envconfig:"CONSUMER_TOPIC"`
 	Brokers                 []string      `envconfig:"KAFKA_ADDR"`
-	DatasetAPIURL           string        `envconfig:"IMPORT_API_URL"`
-	ImportAuthToken         string        `envconfig:"IMPORT_AUTH_TOKEN"`
+	DatasetAPIURL           string        `envconfig:"DATASET_API_URL"`
+	DatasetAPIAuthToken     string        `envconfig:"DATASET_AUTH_TOKEN"`
 	BindAddress             string        `envconfig:"BIND_ADDR"`
 	CacheSize               int           `envconfig:"CACHE_SIZE"`
 	CacheExpiry             int           `envconfig:"CACHE_EXPIRY"`
@@ -28,10 +28,10 @@ func Get() (*Config, error) {
 	}
 
 	cfg = &Config{
-		NewInstanceTopic:        "event-reporter",
+		ReportEventTopic:        "event-reporter",
 		Brokers:                 []string{"localhost:9092"},
-		DatasetAPIURL:           "http://localhost:22200",
-		ImportAuthToken:         "FD0108EA-825D-411C-9B1D-41EF7727F465",
+		DatasetAPIURL:           "http://localhost:21800",
+		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:             ":22200",
 		CacheSize:               100 * 1024 * 1024,
 		CacheExpiry:             60,

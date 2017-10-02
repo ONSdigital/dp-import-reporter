@@ -32,7 +32,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.DatasetAPIURL, cfg.ImportAuthToken, &http.Client{}, ResponseBodyReader{})
+	log.Info("dp-import-reporter config", log.Data{
+		"config": cfg,
+	})
+
+	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, &http.Client{}, ResponseBodyReader{})
 	if err != nil {
 		os.Exit(1)
 	}
@@ -54,7 +58,7 @@ func main() {
 	}
 
 	// create the report event kafka kafkaConsumer.
-	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.NewInstanceTopic, log.Namespace, kafka.OffsetNewest)
+	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.ReportEventTopic, log.Namespace, kafka.OffsetNewest)
 	if err != nil {
 		log.ErrorC("unexpected error while attempting to create kafka kafkaConsumer", err, nil)
 		os.Exit(1)
