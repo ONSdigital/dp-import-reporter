@@ -25,7 +25,7 @@ var (
 	}
 )
 
-func TestHandleEvent_NotInCacheOrDatasetAPI(t *testing.T) {
+func TestHandleEventNotInCacheOrDatasetAPI(t *testing.T) {
 	Convey("Given the handle has been configured correctly", t, func() {
 		datasetAPI, cacheMock := setup()
 
@@ -71,7 +71,7 @@ func TestHandleEvent_NotInCacheOrDatasetAPI(t *testing.T) {
 	})
 }
 
-func TestReportEventHandler_HandleEvent_EventInCache(t *testing.T) {
+func TestReportEventHandlerHandleEventEventInCache(t *testing.T) {
 	datasetAPI, cacheMock := setup()
 
 	cacheMock.GetFunc = func(key []byte) ([]byte, error) {

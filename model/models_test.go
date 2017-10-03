@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 )
 
-func TestReportEvent_GenCacheKeyAndValue(t *testing.T) {
+func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 	Convey("Given a nil reportEvent", t, func() {
 		var e *ReportEvent
 

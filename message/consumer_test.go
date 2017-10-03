@@ -21,7 +21,7 @@ var (
 	}
 )
 
-func TestMessageConsumer_Listen(t *testing.T) {
+func TestMessageConsumerListen(t *testing.T) {
 	Convey("Given the consumer is configured correctly", t, func() {
 
 		Convey("When incoming receives a message", func() {

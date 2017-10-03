@@ -7,6 +7,19 @@ import (
 	"time"
 )
 
+var (
+	expectedConfig = &Config{
+		ReportEventTopic:        "event-reporter",
+		Brokers:                 []string{"localhost:9092"},
+		DatasetAPIURL:           "http://localhost:21800",
+		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
+		BindAddress:             ":22200",
+		CacheSize:               100 * 1024 * 1024,
+		CacheExpiry:             60,
+		GracefulShutdownTimeout: time.Second * 5,
+	}
+)
+
 type processConfigMock struct {
 	prefixCalls []string
 	specCalls   []interface{}
@@ -19,7 +32,7 @@ func (m *processConfigMock) Process(prefix string, spec interface{}) error {
 	return m.err
 }
 
-func newProcessCgfMock() *processConfigMock {
+func newProcessConfigMock() *processConfigMock {
 	return &processConfigMock{
 		prefixCalls: make([]string, 0),
 		specCalls:   make([]interface{}, 0),
@@ -27,11 +40,11 @@ func newProcessCgfMock() *processConfigMock {
 	}
 }
 
-func TestConfig_configNotNil(t *testing.T) {
+func TestConfigNotNil(t *testing.T) {
 	Convey("Given that config is not nil", t, func() {
-		cfg = &Config{}
+		config = &Config{}
 
-		mockProcessCgf := newProcessCgfMock()
+		mockProcessCgf := newProcessConfigMock()
 		processConfig = mockProcessCgf.Process
 
 		Convey("When Get is called", func() {
@@ -39,7 +52,7 @@ func TestConfig_configNotNil(t *testing.T) {
 			actual, err := Get()
 
 			Convey("Then no error is returned along with the expected config", func() {
-				So(actual, ShouldResemble, cfg)
+				So(actual, ShouldResemble, config)
 				So(err, ShouldBeNil)
 			})
 
@@ -52,14 +65,14 @@ func TestConfig_configNotNil(t *testing.T) {
 	})
 }
 
-func TestConfig_configNilErr(t *testing.T) {
+func TestConfigNilErr(t *testing.T) {
 	Convey("Given that config is nil", t, func() {
-		cfg = nil
-		mockProcessCgf := newProcessCgfMock()
+		config = nil
+		mockProcessCgf := newProcessConfigMock()
 		processConfig = mockProcessCgf.Process
 
 		Convey("When processConfig returns an error", func() {
-			mockProcessCgf := newProcessCgfMock()
+			mockProcessCgf := newProcessConfigMock()
 			mockProcessCgf.err = errors.New("Boom!")
 			processConfig = mockProcessCgf.Process
 
@@ -73,51 +86,28 @@ func TestConfig_configNilErr(t *testing.T) {
 			Convey("And processConfig is called 1 time with expected parameters", func() {
 				So(len(mockProcessCgf.prefixCalls), ShouldEqual, 1)
 				So(mockProcessCgf.prefixCalls[0], ShouldEqual, "")
-
-				expected := &Config{
-					ReportEventTopic:        "event-reporter",
-					Brokers:                 []string{"localhost:9092"},
-					DatasetAPIURL:           "http://localhost:22200",
-					DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
-					BindAddress:             ":22200",
-					CacheSize:               100 * 1024 * 1024,
-					CacheExpiry:             60,
-					GracefulShutdownTimeout: time.Second * 5,
-				}
-
 				So(len(mockProcessCgf.specCalls), ShouldEqual, 1)
-				So(mockProcessCgf.specCalls[0], ShouldResemble, expected)
+				So(mockProcessCgf.specCalls[0], ShouldResemble, expectedConfig)
 			})
 		})
 	})
 }
 
-func TestConfig_configNilSuccess(t *testing.T) {
+func TestConfigNilSuccess(t *testing.T) {
 	Convey("Given that config is nil", t, func() {
-		cfg = nil
-		mockProcessCgf := newProcessCgfMock()
+		config = nil
+		mockProcessCgf := newProcessConfigMock()
 		processConfig = mockProcessCgf.Process
 
 		Convey("When processConfig is called", func() {
-			mockProcessCgf := newProcessCgfMock()
+			mockProcessCgf := newProcessConfigMock()
 			mockProcessCgf.err = nil
 			processConfig = mockProcessCgf.Process
-
-			expected := &Config{
-				ReportEventTopic:        "event-reporter",
-				Brokers:                 []string{"localhost:9092"},
-				DatasetAPIURL:           "http://localhost:22200",
-				DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
-				BindAddress:             ":22200",
-				CacheSize:               100 * 1024 * 1024,
-				CacheExpiry:             60,
-				GracefulShutdownTimeout: time.Second * 5,
-			}
 
 			actual, err := Get()
 
 			Convey("Then the expected config is returned and error is nil", func() {
-				So(actual, ShouldResemble, expected)
+				So(actual, ShouldResemble, expectedConfig)
 				So(err, ShouldBeNil)
 			})
 
@@ -126,7 +116,7 @@ func TestConfig_configNilSuccess(t *testing.T) {
 				So(mockProcessCgf.prefixCalls[0], ShouldEqual, "")
 
 				So(len(mockProcessCgf.specCalls), ShouldEqual, 1)
-				So(mockProcessCgf.specCalls[0], ShouldResemble, expected)
+				So(mockProcessCgf.specCalls[0], ShouldResemble, expectedConfig)
 			})
 		})
 	})

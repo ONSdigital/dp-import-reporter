@@ -19,15 +19,15 @@ type Config struct {
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 }
 
-var cfg *Config
+var config *Config
 var processConfig func(prefix string, spec interface{}) error = envconfig.Process
 
 func Get() (*Config, error) {
-	if cfg != nil {
-		return cfg, nil
+	if config != nil {
+		return config, nil
 	}
 
-	cfg = &Config{
+	config = &Config{
 		ReportEventTopic:        "event-reporter",
 		Brokers:                 []string{"localhost:9092"},
 		DatasetAPIURL:           "http://localhost:21800",
@@ -38,10 +38,10 @@ func Get() (*Config, error) {
 		GracefulShutdownTimeout: time.Second * 5,
 	}
 
-	if err := processConfig("", cfg); err != nil {
+	if err := processConfig("", config); err != nil {
 		log.ErrorC("error while attempting to load env config", err, nil)
 		return nil, err
 	}
 
-	return cfg, nil
+	return config, nil
 }

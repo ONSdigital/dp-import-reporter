@@ -75,9 +75,9 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
 		defer cancel()
 
-		server.Shutdown(ctx)
 		reportEventConsumer.Close(ctx)
 		kafkaConsumer.Close(ctx)
+		server.Shutdown(ctx)
 	}
 
 	// block until shutdown event happens...

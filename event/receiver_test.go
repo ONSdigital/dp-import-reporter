@@ -9,7 +9,7 @@ import (
 	"errors"
 )
 
-func TestReceiver_ProcessMessage(t *testing.T) {
+func TestReceiverProcessMessage(t *testing.T) {
 
 	Convey("Given a correctly configured Receiver", t, func() {
 		e := &model.ReportEvent{

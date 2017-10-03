@@ -28,7 +28,7 @@ const (
 	unexpectedHTTPStatus  = "unexpected status code returned from dataset api client"
 	readResponseBodyErr   = "unexpected error while attempting to read HTTP response body"
 	unmarshalResponseErr  = "unexpected error while attempting to unmarshal HTTP response body into domain object"
-	instanceIDNil         = "instanceID is a required but was empty"
+	instanceIDNil         = "instanceID is required but was empty"
 	eventNil              = "event required but was nil"
 	marshallEventErr      = "unexpected error when attempting to marshal event to json"
 	createRequestErr      = "unexpected error when attempting to create HTTP request"
@@ -119,7 +119,7 @@ func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, er
 	return &instance, err
 }
 
-// AddEventToInstance make a post request to the dataset API to add a report event to rge specified Instance
+// AddEventToInstance make a post request to the dataset API to add a report event to get the specified Instance
 func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Event) error {
 	if len(instanceID) == 0 {
 		return newDatasetAPIError(instanceIDNil)

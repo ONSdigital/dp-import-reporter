@@ -35,7 +35,7 @@ var (
 	}
 )
 
-func TestDatasetAPIClient_GetInstance(t *testing.T) {
+func TestDatasetAPIClientGetInstance(t *testing.T) {
 	Convey("Given a correctly configured DatasetAPIClient", t, func() {
 		body, _ := json.Marshal(validInstance)
 		respBodyReader, _, httpClient, cli := setup(body, http.StatusOK)
@@ -60,7 +60,7 @@ func TestDatasetAPIClient_GetInstance(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_GetInstance_HttpCliErr(t *testing.T) {
+func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 	Convey("Given httpClient.Do returns an error", t, func() {
 
 		body, _ := json.Marshal(validInstance)
@@ -87,7 +87,7 @@ func TestDatasetAPIClient_GetInstance_HttpCliErr(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_GetInstance_HttpStatus(t *testing.T) {
+func TestDatasetAPIClientGetInstanceHttpStatus(t *testing.T) {
 	Convey("Given httpClient.Do returns an non 200 status", t, func() {
 
 		body, _ := json.Marshal(validInstance)
@@ -113,7 +113,7 @@ func TestDatasetAPIClient_GetInstance_HttpStatus(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_GetInstance_ResponseBodyReadErr(t *testing.T) {
+func TestDatasetAPIClientGetInstanceResponseBodyReadErr(t *testing.T) {
 	Convey("Given responseBodyReader returns an error", t, func() {
 
 		body, _ := json.Marshal(validInstance)
@@ -145,7 +145,7 @@ func TestDatasetAPIClient_GetInstance_ResponseBodyReadErr(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_GetInstance_UnmarshallErr(t *testing.T) {
+func TestDatasetAPIClientGetInstanceUnmarshallErr(t *testing.T) {
 	Convey("Given unmarshalling the response body returns an error", t, func() {
 
 		body := []byte("This is not a valid response")
@@ -173,7 +173,7 @@ func TestDatasetAPIClient_GetInstance_UnmarshallErr(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_AddEventToInstance_invalidParams(t *testing.T) {
+func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 	Convey("Given instanceID is empty", t, func() {
 		_, _, httpClient, cli := setup(nil, http.StatusOK)
 
@@ -207,7 +207,7 @@ func TestDatasetAPIClient_AddEventToInstance_invalidParams(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_AddEventToInstance_HttpCliErr(t *testing.T) {
+func TestDatasetAPIClientAddEventToInstanceHttpCliErr(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
 		_, _, httpClient, cli := setup(nil, http.StatusOK)
 
@@ -232,7 +232,7 @@ func TestDatasetAPIClient_AddEventToInstance_HttpCliErr(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_AddEventToInstance_UnexpectedStatus(t *testing.T) {
+func TestDatasetAPIClientAddEventToInstanceUnexpectedStatus(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
 		_, _, httpClient, cli := setup(nil, http.StatusBadRequest)
 
@@ -253,7 +253,7 @@ func TestDatasetAPIClient_AddEventToInstance_UnexpectedStatus(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_AddEventToInstance(t *testing.T) {
+func TestDatasetAPIClientAddEventToInstance(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
 		_, _, httpClient, cli := setup(nil, http.StatusCreated)
 
@@ -273,7 +273,7 @@ func TestDatasetAPIClient_AddEventToInstance(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_UpdateInstanceStatus_InvalidParams(t *testing.T) {
+func TestDatasetAPIClientUpdateInstanceStatusInvalidParams(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
 		_, _, httpClient, cli := setup(nil, 0)
 
@@ -303,7 +303,7 @@ func TestDatasetAPIClient_UpdateInstanceStatus_InvalidParams(t *testing.T) {
 	})
 }
 
-func TestDatasetAPIClient_UpdateInstanceStatus(t *testing.T) {
+func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
 		_, response, httpClient, cli := setup(nil, http.StatusOK)
 
