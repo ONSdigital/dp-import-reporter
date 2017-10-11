@@ -1,9 +1,9 @@
 package message
 
 import (
+	"context"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
-	"context"
 	"time"
 )
 
@@ -31,7 +31,7 @@ func NewMessageConsumer(consumer KafkaConsumer, eventHandler Receiver) MessageCo
 	}
 }
 
-// Listen poll the kafka topic for incoming messages
+// Listen poll the kafka topic for incoming messages and process them
 func (c *MessageConsumer) Listen() {
 	defer func() {
 		c.closed <- true
@@ -42,8 +42,7 @@ func (c *MessageConsumer) Listen() {
 			select {
 			case eventMsg := <-c.consumer.Incoming():
 				if err := c.eventReceiver.ProcessMessage(eventMsg); err != nil {
-					log.ErrorC("unexpected error returned from handleEvent, kafka offset will not be updated", err, nil)
-					//eventMsg.Commit()
+					log.ErrorC("unexpected error returned from eventReceiver.ProcessMessage, event message will not be committed to consumer group", err, nil)
 					continue
 				}
 				eventMsg.Commit()
@@ -55,14 +54,12 @@ func (c *MessageConsumer) Listen() {
 	}()
 }
 
-// Close shutdown Consumer.Listen loop.
+// Close attempt to close the consumer Listen loop. If context is nil or no context deadline is set then the default is
+// applied. Close will return when the Listen loop notifies it has exited or the timeout limit is reached.
 func (c MessageConsumer) Close(ctx context.Context) {
-	// if nil use a default context with a timeout
 	if ctx == nil {
 		ctx, _ = context.WithTimeout(context.Background(), time.Second*10)
 	}
-
-	// if the context is not nil but no deadline is set the apply the default
 	if _, ok := ctx.Deadline(); !ok {
 		ctx, _ = context.WithTimeout(context.Background(), time.Second*10)
 	}

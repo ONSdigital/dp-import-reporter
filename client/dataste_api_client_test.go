@@ -1,19 +1,19 @@
 package client
 
 import (
-	"testing"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ONSdigital/dp-import-reporter/mocks"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 
-	"io"
-	"github.com/ONSdigital/dp-import-reporter/model"
-	"encoding/json"
-	"net/http"
-	"io/ioutil"
 	"bytes"
+	"encoding/json"
 	"errors"
-	"strings"
 	"fmt"
+	"github.com/ONSdigital/dp-import-reporter/model"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"strings"
 )
 
 const (
@@ -33,6 +33,8 @@ var (
 		State:  "RED",
 		Events: []*model.Event{event},
 	}
+
+	errMock = errors.New("boom")
 )
 
 func TestDatasetAPIClientGetInstance(t *testing.T) {
@@ -51,6 +53,7 @@ func TestDatasetAPIClientGetInstance(t *testing.T) {
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				So(len(httpClient.DoCalls()), ShouldEqual, 1)
 				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader.Read is called 1 time with the expected parameters", func() {
@@ -65,10 +68,9 @@ func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 
 		body, _ := json.Marshal(validInstance)
 		respBodyReader, _, httpClient, cli := setup(body, http.StatusOK)
-		httpCliErr := errors.New("Boom!")
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
-			return nil, httpCliErr
+			return nil, errMock
 		}
 
 		Convey("When GetInstance is invoked", func() {
@@ -77,7 +79,13 @@ func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, httpCliErr))
+				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, errMock))
+			})
+
+			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 1)
+				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader is never invoked", func() {
@@ -106,6 +114,12 @@ func TestDatasetAPIClientGetInstanceHttpStatus(t *testing.T) {
 				So(err, ShouldResemble, newDatasetAPIError(unexpectedHTTPStatus))
 			})
 
+			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 1)
+				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+			})
+
 			Convey("And responseBodyReader is never invoked", func() {
 				So(len(respBodyReader.ReadCalls()), ShouldEqual, 0)
 			})
@@ -117,11 +131,10 @@ func TestDatasetAPIClientGetInstanceResponseBodyReadErr(t *testing.T) {
 	Convey("Given responseBodyReader returns an error", t, func() {
 
 		body, _ := json.Marshal(validInstance)
-		readBodyErr := errors.New("Bork!")
 
 		respBodyReader, response, httpClient, cli := setup(body, http.StatusOK)
 		respBodyReader.ReadFunc = func(r io.Reader) ([]byte, error) {
-			return nil, readBodyErr
+			return nil, errMock
 		}
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
@@ -134,7 +147,13 @@ func TestDatasetAPIClientGetInstanceResponseBodyReadErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, wrappedDatasetAPIError(readResponseBodyErr, readBodyErr))
+				So(err, ShouldResemble, wrappedDatasetAPIError(readResponseBodyErr, errMock))
+			})
+
+			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 1)
+				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader is called 1 time with the expected parameters", func() {
@@ -163,6 +182,12 @@ func TestDatasetAPIClientGetInstanceUnmarshallErr(t *testing.T) {
 				So(i, ShouldBeNil)
 				So(err, ShouldNotBeNil)
 				So(strings.Contains(err.Error(), unmarshalResponseErr), ShouldBeTrue)
+			})
+
+			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+				So(len(httpClient.DoCalls()), ShouldEqual, 1)
+				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader is called 1 time with the expected parameters", func() {
@@ -211,22 +236,22 @@ func TestDatasetAPIClientAddEventToInstanceHttpCliErr(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
 		_, _, httpClient, cli := setup(nil, http.StatusOK)
 
-		httpCliErr := errors.New("Wubba dubba dub dub")
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
-			return nil, httpCliErr
+			return nil, errMock
 		}
 
 		Convey("When httpClient.Do returns an error", func() {
 			err := cli.AddEventToInstance(testInstanceID, event)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, httpCliErr))
+				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, errMock))
 			})
 
 			Convey("And httpClient.Do is called 1 time", func() {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 		})
 	})
@@ -248,6 +273,7 @@ func TestDatasetAPIClientAddEventToInstanceUnexpectedStatus(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 		})
 	})
@@ -268,6 +294,7 @@ func TestDatasetAPIClientAddEventToInstance(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 		})
 	})
@@ -322,20 +349,20 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 		})
 
 		Convey("When httpClient.Do returns an error", func() {
-			httpCliDoErr := errors.New("Bork!")
 			httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
-				return nil, httpCliDoErr
+				return nil, errMock
 			}
 			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, httpCliDoErr))
+				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, errMock))
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 		})
 
@@ -351,6 +378,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
+				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
 			})
 
 		})
@@ -429,7 +457,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 	})
 }
 
-func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Response, *mocks.HttpClientMock, *DatasetAPIClient) {
+func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Response, *mocks.HTTPClientMock, *DatasetAPIClient) {
 	reader := bytes.NewReader(body)
 	readeCloser := ioutil.NopCloser(reader)
 
@@ -444,7 +472,7 @@ func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Respon
 		StatusCode: status,
 	}
 
-	httpClient := &mocks.HttpClientMock{
+	httpClient := &mocks.HTTPClientMock{
 		DoFunc: func(req *http.Request) (*http.Response, error) {
 			return response, nil
 		},

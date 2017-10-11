@@ -1,15 +1,15 @@
 package message
 
 import (
-	"testing"
-	"github.com/ONSdigital/dp-import-reporter/mocks"
-	"github.com/ONSdigital/go-ns/kafka"
-	"github.com/ONSdigital/dp-import-reporter/model"
-	. "github.com/smartystreets/goconvey/convey"
-	"github.com/ONSdigital/dp-import-reporter/schema"
-	"github.com/ONSdigital/go-ns/log"
-	"time"
 	"errors"
+	"github.com/ONSdigital/dp-import-reporter/mocks"
+	"github.com/ONSdigital/dp-import-reporter/model"
+	"github.com/ONSdigital/dp-import-reporter/schema"
+	"github.com/ONSdigital/go-ns/kafka"
+	"github.com/ONSdigital/go-ns/log"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
+	"time"
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 func TestMessageConsumerListen(t *testing.T) {
 	Convey("Given the consumer is configured correctly", t, func() {
 
-		Convey("When incoming receives a message", func() {
+		Convey("When an incoming message is received", func() {
 			onCommit := make(chan bool, 1)
 			avro, _ := schema.ReportEventSchema.Marshal(reportEvent)
 			kafkaMsg, incoming, kafkaConsumer, receiver := setUp(onCommit, avro, nil)
@@ -43,18 +43,18 @@ func TestMessageConsumerListen(t *testing.T) {
 				t.FailNow()
 			}
 
-			Convey("Then Handler is called 1 time with the expected parameters", func() {
+			Convey("Then eventReceiver.ProcessMessage is called once with the expected parameters", func() {
 				params := receiver.ProcessMessageCalls()
 				So(len(params), ShouldEqual, 1)
 				So(params[0].Event, ShouldResemble, kafkaMsg)
 			})
 
-			Convey("And eventMsg.Commit is called 1 time", func() {
+			Convey("And eventMsg.Commit is called once", func() {
 				So(len(kafkaMsg.CommitCalls()), ShouldEqual, 1)
 			})
 		})
 
-		Convey("When the Handler returns an error", func() {
+		Convey("When the eventReceiver.ProcessMessage returns an error", func() {
 			onCommit := make(chan bool, 1)
 			avro, _ := schema.ReportEventSchema.Marshal(reportEvent)
 			handlerErr := errors.New("Flubba Wubba Dub Dub")
@@ -78,7 +78,7 @@ func TestMessageConsumerListen(t *testing.T) {
 			incoming <- kafkaMsg
 
 			select {
-			case <-onHandle: // wait for on handle to receive before performing test assertions.
+			case <-onHandle: // wait for onHandle to receive before performing test assertions.
 				log.Debug("message handled as expected", nil)
 			case <-time.After(time.Second * 5):
 				log.Info("failing test: expected behaviour did not happen before timeout", nil)
@@ -87,7 +87,7 @@ func TestMessageConsumerListen(t *testing.T) {
 
 			consumer.Close(nil)
 
-			Convey("Then Handler is called 1 time with the expected parameters", func() {
+			Convey("Then eventReceiver.ProcessMessage is called once with the expected parameters", func() {
 				params := receiverMock.ProcessMessageCalls()
 				So(len(params), ShouldEqual, 1)
 				So(params[0].Event, ShouldResemble, kafkaMsg)

@@ -1,11 +1,11 @@
 package event
 
 import (
-	"testing"
-	. "github.com/smartystreets/goconvey/convey"
-	"github.com/ONSdigital/dp-import-reporter/model"
-	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"errors"
+	"github.com/ONSdigital/dp-import-reporter/mocks"
+	"github.com/ONSdigital/dp-import-reporter/model"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 var (
@@ -18,9 +18,9 @@ var (
 	}
 
 	e = &model.ReportEvent{
-		InstanceID: testInstanceID,
-		EventMsg:   "Its all gone horribly wrong!",
-		EventType:  "error",
+		InstanceID:  testInstanceID,
+		EventMsg:    "Its all gone horribly wrong!",
+		EventType:   "error",
 		ServiceName: "myService",
 	}
 )
@@ -35,7 +35,7 @@ func TestHandleEventNotInCacheOrDatasetAPI(t *testing.T) {
 			ExpireSeconds: 60,
 		}
 
-		Convey("When handle is invoked with an e that's not in cacheMock or in the dataset instance.events", func() {
+		Convey("When handle is invoked with an event that's not in cacheMock or in the dataset instance.events", func() {
 			err := reportEventHandler.HandleEvent(e)
 
 			Convey("Then no error is returned", func() {
@@ -120,27 +120,27 @@ func TestReportEventHandlerHandleEventEventInCache(t *testing.T) {
 
 func setup() (*mocks.DatasetAPICliMock, *mocks.CacheMock) {
 	return &mocks.DatasetAPICliMock{
-		AddEventToInstanceFunc: func(instanceID string, e *model.Event) error {
-			return nil
-		},
-		GetInstanceFunc: func(instanceID string) (*model.Instance, error) {
-			return instance, nil
-		},
-		UpdateInstanceStatusFunc: func(instanceID string, state *model.State) error {
-			return nil
-		},
-	}, &mocks.CacheMock{
-		GetFunc: func(key []byte) ([]byte, error) {
-			return nil, errors.New("not found")
-		},
-		DelFunc: func(key []byte) bool {
-			return true
-		},
-		SetFunc: func(key []byte, value []byte, expireSeconds int) error {
-			return nil
-		},
-		TTLFunc: func(key []byte) (uint32, error) {
-			return 0, nil
-		},
-	}
+			AddEventToInstanceFunc: func(instanceID string, e *model.Event) error {
+				return nil
+			},
+			GetInstanceFunc: func(instanceID string) (*model.Instance, error) {
+				return instance, nil
+			},
+			UpdateInstanceStatusFunc: func(instanceID string, state *model.State) error {
+				return nil
+			},
+		}, &mocks.CacheMock{
+			GetFunc: func(key []byte) ([]byte, error) {
+				return nil, errors.New("not found")
+			},
+			DelFunc: func(key []byte) bool {
+				return true
+			},
+			SetFunc: func(key []byte, value []byte, expireSeconds int) error {
+				return nil
+			},
+			TTLFunc: func(key []byte) (uint32, error) {
+				return 0, nil
+			},
+		}
 }

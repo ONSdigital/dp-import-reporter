@@ -1,9 +1,9 @@
 package event
 
 import (
-	"time"
-	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/dp-import-reporter/model"
+	"github.com/ONSdigital/go-ns/log"
+	"time"
 )
 
 //go:generate moq -out ../mocks/event_generated_mocks.go -pkg mocks . DatasetAPICli Cache EventHandler
@@ -50,7 +50,8 @@ type Handler struct {
 	ExpireSeconds int
 }
 
-// HandleEvent handle the reportEvent
+// HandleEvent if the event does not exist in the local cache add it to the dataset instance events (if it does not
+// already exist) & add to the local cache, otherwise update the cache time to live.
 func (r Handler) HandleEvent(e *model.ReportEvent) error {
 	logDetails := log.Data{reportEventKey: *e}
 	log.Info(handlingEvent, logDetails)
@@ -61,7 +62,6 @@ func (r Handler) HandleEvent(e *model.ReportEvent) error {
 		return err
 	}
 
-	// err != nil means not in cache.
 	if _, err := r.Cache.Get(key); err != nil {
 		log.Info(eventNotInCache, logDetails)
 		i, err := r.DatasetAPI.GetInstance(e.InstanceID)
@@ -101,7 +101,7 @@ func (r Handler) HandleEvent(e *model.ReportEvent) error {
 	}
 	log.Info(updatingCacheTimeout, logDetails)
 
-	// It is in the cache so reset the time to live.
+	// If the key exists in the cache delete it and set it again to reset the time to live
 	r.Cache.Del(key)
 	r.Cache.Set(key, value, r.ExpireSeconds)
 	return nil

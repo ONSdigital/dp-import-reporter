@@ -1,23 +1,23 @@
 package client
 
 import (
-	"net/http"
-	"fmt"
-	"github.com/ONSdigital/go-ns/log"
+	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
+	"fmt"
 	"github.com/ONSdigital/dp-import-reporter/model"
-	"bytes"
+	"github.com/ONSdigital/go-ns/log"
+	"io"
+	"net/http"
 )
 
-//go:generate moq -out ../mocks/dataset_api_generated_mocks.go -pkg mocks . HttpClient ResponseBodyReader
+//go:generate moq -out ../mocks/dataset_api_generated_mocks.go -pkg mocks . HTTPClient ResponseBodyReader
 
 const (
 	getInstanceURL        = "%s/instances/%s"
 	putInstanceStateURL   = getInstanceURL
 	addInstanceEventURL   = "%s/instances/%s/events"
-	authTokenHeader       = "internal-token"
+	authTokenHeader       = "Internal-Token"
 	expectedKey           = "expected"
 	actualKey             = "actual"
 	uriKey                = "uri"
@@ -34,13 +34,13 @@ const (
 	createRequestErr      = "unexpected error when attempting to create HTTP request"
 	hostEmpty             = "requires a non empty host"
 	authTokenEmpty        = "authToken required but was empty"
-	httpClientNil         = "HttpClient required but was nil"
+	httpClientNil         = "HTTPClient required but was nil"
 	responseBodyReaderNil = "ResponseBodyReader required but was nil"
 	stateNil              = "state is required but was nil"
 )
 
-// HttpClient defines a client for making http requests.
-type HttpClient interface {
+// HTTPClient defines a client for making http requests.
+type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
@@ -53,12 +53,12 @@ type ResponseBodyReader interface {
 type DatasetAPIClient struct {
 	host           string
 	authToken      string
-	httpClient     HttpClient
+	httpClient     HTTPClient
 	responseReader ResponseBodyReader
 }
 
 // NewDatasetAPIClient create a new DatasetAPIClient using the supplied configuration
-func NewDatasetAPIClient(host string, authToken string, httpCli HttpClient, respBodyReader ResponseBodyReader) (*DatasetAPIClient, error) {
+func NewDatasetAPIClient(host string, authToken string, httpCli HTTPClient, respBodyReader ResponseBodyReader) (*DatasetAPIClient, error) {
 	if len(host) == 0 {
 		return nil, newDatasetAPIError(hostEmpty)
 	}
@@ -154,6 +154,7 @@ func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Even
 	return nil
 }
 
+// UpdateInstanceStatus send a PUT request to the dataset API to update the status of the specified instance
 func (cli *DatasetAPIClient) UpdateInstanceStatus(instanceID string, state *model.State) error {
 	if len(instanceID) == 0 {
 		return newDatasetAPIError(instanceIDNil)
@@ -187,6 +188,7 @@ func (cli *DatasetAPIClient) UpdateInstanceStatus(instanceID string, state *mode
 	return nil
 }
 
+// doRequest builds a Dataset API request from the specified url, method & payload & sets the required authentication header
 func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload interface{}, logData log.Data) (*http.Response, error) {
 	var body []byte
 	var err error
@@ -204,6 +206,8 @@ func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload in
 	} else {
 		req, err = http.NewRequest(httpMethod, url, nil)
 	}
+
+	req.Header.Set(authTokenHeader, cli.authToken)
 
 	if err != nil {
 		log.Error(err, logData)
@@ -224,5 +228,5 @@ func wrappedDatasetAPIError(context string, originalErr error) error {
 }
 
 func newDatasetAPIError(details string) error {
-	return errors.New(fmt.Sprintf("datasetAPIClient: %s", details))
+	return fmt.Errorf("datasetAPIClient: %s", details)
 }

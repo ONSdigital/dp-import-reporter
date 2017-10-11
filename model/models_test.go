@@ -1,10 +1,10 @@
 package model
 
 import (
-	"testing"
-	. "github.com/smartystreets/goconvey/convey"
-	"errors"
 	"encoding/json"
+	"errors"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 func TestReportEventGenCacheKeyAndValue(t *testing.T) {
@@ -14,7 +14,7 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 		Convey("When GenCacheKeyAndValue is invoked", func() {
 			key, val, err := e.GenCacheKeyAndValue()
 
-			Convey("Then the expected error, key and val are returned", func() {
+			Convey("Then the expected error, key and value are returned", func() {
 				So(err, ShouldResemble, errors.New(reportEventNil))
 				So(key, ShouldBeNil)
 				So(val, ShouldBeNil)
@@ -42,7 +42,7 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 		Convey("When GenCacheKeyAndValue is invoked", func() {
 			key, val, err := reportEvent.GenCacheKeyAndValue()
 
-			Convey("Then the expected error, key and val are returned", func() {
+			Convey("Then the expected error, key and value are returned", func() {
 				So(err, ShouldResemble, errors.New(reportEventTypeEmpty))
 				So(key, ShouldBeNil)
 				So(val, ShouldBeNil)
@@ -59,7 +59,7 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 		Convey("When GenCacheKeyAndValue is invoked", func() {
 			key, val, err := reportEvent.GenCacheKeyAndValue()
 
-			Convey("Then the expected error, key and val are returned", func() {
+			Convey("Then the expected error, key and value are returned", func() {
 				So(err, ShouldResemble, errors.New(reportEventServiceNameEmpty))
 				So(key, ShouldBeNil)
 				So(val, ShouldBeNil)
@@ -78,7 +78,7 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 		Convey("When GenCacheKeyAndValue is invoked", func() {
 			key, val, err := reportEvent.GenCacheKeyAndValue()
 
-			Convey("Then the expected error, key and val are returned", func() {
+			Convey("Then the expected error, key and value are returned", func() {
 				expectedKey, _ := json.Marshal(&cacheKey{
 					instanceID:  reportEvent.InstanceID,
 					eventType:   reportEvent.EventType,

@@ -1,11 +1,11 @@
 package server
 
 import (
-	"testing"
-	. "github.com/smartystreets/goconvey/convey"
-	"net/http/httptest"
-	"net/http"
 	"github.com/ONSdigital/dp-import-reporter/mocks"
+	. "github.com/smartystreets/goconvey/convey"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 )
 
 func TestDropCache(t *testing.T) {
@@ -23,7 +23,7 @@ func TestDropCache(t *testing.T) {
 		Convey("When DropCache is invoked", func() {
 			clearCacheHandler.ServeHTTP(w, r)
 
-			Convey("Then cache.Clear is called 1 time", func() {
+			Convey("Then cache.Clear is called once", func() {
 				So(len(cacheMock.ClearCalls()), ShouldEqual, 1)
 			})
 

@@ -1,13 +1,15 @@
 package event
 
 import (
-	"testing"
+	"errors"
 	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ONSdigital/dp-import-reporter/schema"
-	"errors"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
+
+var errMock = errors.New("broken")
 
 func TestReceiverProcessMessage(t *testing.T) {
 
@@ -43,14 +45,14 @@ func TestReceiverProcessMessage(t *testing.T) {
 				So(err, ShouldBeNil)
 			})
 
-			Convey("And handler.HandleEvent is called 1 time with the expected parameters", func() {
+			Convey("And handler.HandleEvent is called once with the expected parameters", func() {
 				params := handler.HandleEventCalls()
 				So(len(params), ShouldEqual, 1)
 				So(params[0].E, ShouldResemble, e)
 			})
 		})
 
-		Convey("When an invalid is received", func() {
+		Convey("When an invalid message is received", func() {
 			kafkaMsg := &mocks.KafkaMessageMock{
 				GetDataFunc: func() []byte {
 					return []byte("This is not a valid message")
@@ -71,7 +73,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 		Convey("When Handler.HandleEvent returns an error", func() {
 			handler := &mocks.EventHandlerMock{
 				HandleEventFunc: func(e *model.ReportEvent) error {
-					return errors.New("Wubba Lubba Dub Dub")
+					return errMock
 				},
 			}
 
@@ -82,10 +84,10 @@ func TestReceiverProcessMessage(t *testing.T) {
 			err := receiver.ProcessMessage(kafkaMsg)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, errors.New("Wubba Lubba Dub Dub"))
+				So(err, ShouldResemble, errMock)
 			})
 
-			Convey("And handler.HandleEvent is called 1 time with the expected parameters", func() {
+			Convey("And handler.HandleEvent is called once with the expected parameters", func() {
 				params := handler.HandleEventCalls()
 				So(len(params), ShouldEqual, 1)
 				So(params[0].E, ShouldResemble, e)
