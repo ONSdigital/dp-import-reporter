@@ -16,7 +16,7 @@ dp-repo-template
 | DATASET_AUTH_TOKEN        | "D0108EA-825D-411C-9B1D-41EF7727F465"  | The Auth token for the Dataset API
 | CACHE_SIZE                | "100 * 1024 * 1024"                    | The size of the in memory cache
 | CACHE_EXPIRY              | "60"                                   | The time to live (in seconds) of the cache
-| GRACEFUL_SHUTDOWN_TIMEOUT | "5"                                    | The shutdown timeout in seconds
+| GRACEFUL_SHUTDOWN_TIMEOUT | "5s"                                   | The shutdown timeout in seconds
 
 
 
