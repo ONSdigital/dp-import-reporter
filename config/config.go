@@ -3,8 +3,8 @@ package config
 import (
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/kelseyhightower/envconfig"
 )
 
 // Config struct to hold application configuration.
@@ -28,7 +28,7 @@ func Get() (*Config, error) {
 	}
 
 	config = &Config{
-		ReportEventTopic:        "event-reporter",
+		ReportEventTopic:        "report-events",
 		Brokers:                 []string{"localhost:9092"},
 		DatasetAPIURL:           "http://localhost:21800",
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
