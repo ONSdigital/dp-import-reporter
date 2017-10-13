@@ -1,22 +1,15 @@
 package server
 
 import (
-	"github.com/gorilla/mux"
-	"net/http"
+	"context"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/server"
-	"context"
+	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"net/http"
 )
 
 //go:generate moq -out ../mocks/server_generated_mocks.go -pkg mocks . ClearableCache
-
-const (
-	startingServer           = "starting import-reporter HTTP server"
-	listenAndServeErr        = "httpServer.ListenAndServe returned error"
-	gracefulShutdownComplete = "http server graceful shutdown complete"
-	healthCheckPath          = "/healthcheck"
-	dropCachePath            = "/dropcache"
-)
 
 type ClearableCache interface {
 	Clear()
@@ -26,8 +19,8 @@ var httpServer *server.Server
 
 func Start(cache ClearableCache, bindAdd string, errorChan chan error) {
 	router := mux.NewRouter()
-	router.Path(healthCheckPath).Methods(http.MethodGet).HandlerFunc(HealthCheck)
-	router.Path(dropCachePath).Methods(http.MethodPost).HandlerFunc(ClearCache(cache))
+	router.Path("/healthcheck").Methods(http.MethodGet).HandlerFunc(HealthCheck)
+	router.Path("/dropcache").Methods(http.MethodPost).HandlerFunc(ClearCache(cache))
 
 	httpServer = server.New(bindAdd, router)
 
@@ -35,31 +28,30 @@ func Start(cache ClearableCache, bindAdd string, errorChan chan error) {
 	httpServer.HandleOSSignals = false
 
 	go func() {
-		log.Info(startingServer, log.Data{
-			healthCheckPath: http.MethodGet,
-			dropCachePath:   http.MethodPost,
+		log.Info("starting import-reporter HTTP server", log.Data{
+			"/healthcheck": http.MethodGet,
+			"/dropcache":   http.MethodPost,
 		})
 		if err := httpServer.ListenAndServe(); err != nil {
-			log.ErrorC(listenAndServeErr, err, nil)
-			errorChan <- err
+			errorChan <- errors.Wrap(err, "httpServer.ListenAndServe returned error")
 		}
 	}()
 }
 
 func ClearCache(cache ClearableCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info("Dropping import-reporter cache", nil)
+		log.Info("dropping import-reporter cache", nil)
 		cache.Clear()
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
-	log.Info("Health check endpoint", nil)
+	log.Info("health check endpoint", nil)
 	w.WriteHeader(http.StatusOK)
 }
 
 func Shutdown(ctx context.Context) {
 	httpServer.Shutdown(ctx)
-	log.Info(gracefulShutdownComplete, nil)
+	log.Info("http server: graceful shutdown complete", nil)
 }

@@ -1,10 +1,10 @@
 package model
 
 import (
-	"time"
-	"reflect"
 	"encoding/json"
 	"errors"
+	"reflect"
+	"time"
 )
 
 const (
@@ -62,7 +62,7 @@ type ReportEvent struct {
 
 //Instance provides a struct for all the instance information
 type Instance struct {
-	InstanceID                string   `json:"instance_id"`
+	InstanceID                string   `json:"id"`
 	NumberOfObservations      int64    `json:"total_observations"`
 	TotalInsertedObservations int64    `json:"total_inserted_observations,omitempty"`
 	State                     string   `json:"state"`

@@ -3,8 +3,8 @@ package config
 import (
 	"time"
 
-	"github.com/ONSdigital/go-ns/log"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 )
 
 // Config struct to hold application configuration.
@@ -30,7 +30,7 @@ func Get() (*Config, error) {
 	config = &Config{
 		ReportEventTopic:        "report-events",
 		Brokers:                 []string{"localhost:9092"},
-		DatasetAPIURL:           "http://localhost:21800",
+		DatasetAPIURL:           "http://localhost:22000",
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:             ":22200",
 		CacheSize:               100 * 1024 * 1024,
@@ -39,8 +39,7 @@ func Get() (*Config, error) {
 	}
 
 	if err := processConfig("", config); err != nil {
-		log.ErrorC("error while attempting to load env config", err, nil)
-		return nil, err
+		return nil, errors.Wrap(err, "config: error while attempting to load environment config")
 	}
 
 	return config, nil

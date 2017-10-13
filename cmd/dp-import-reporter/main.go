@@ -7,17 +7,17 @@ import (
 	"runtime/debug"
 	"syscall"
 
+	"github.com/ONSdigital/dp-import-reporter/client"
 	"github.com/ONSdigital/dp-import-reporter/config"
+	"github.com/ONSdigital/dp-import-reporter/event"
+	"github.com/ONSdigital/dp-import-reporter/message"
+	"github.com/ONSdigital/dp-import-reporter/server"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/coocood/freecache"
-	"github.com/ONSdigital/dp-import-reporter/event"
-	"github.com/ONSdigital/dp-import-reporter/client"
-	"net/http"
-	"io/ioutil"
 	"io"
-	"github.com/ONSdigital/dp-import-reporter/server"
-	"github.com/ONSdigital/dp-import-reporter/message"
+	"io/ioutil"
+	"net/http"
 )
 
 func main() {
@@ -29,6 +29,7 @@ func main() {
 
 	cfg, err := config.Get()
 	if err != nil {
+		log.ErrorC("config.get retruned error", err, nil)
 		os.Exit(1)
 	}
 
@@ -38,6 +39,7 @@ func main() {
 
 	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, &http.Client{}, ResponseBodyReader{})
 	if err != nil {
+		log.ErrorC("error creating new dataset api client", err, nil)
 		os.Exit(1)
 	}
 
@@ -60,7 +62,7 @@ func main() {
 	// create the report event kafka kafkaConsumer.
 	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.ReportEventTopic, log.Namespace, kafka.OffsetNewest)
 	if err != nil {
-		log.ErrorC("unexpected error while attempting to create kafka kafkaConsumer", err, nil)
+		log.ErrorC("error while attempting to create kafka kafkaConsumer", err, nil)
 		os.Exit(1)
 	}
 
@@ -70,7 +72,7 @@ func main() {
 
 	// shutdown all the things.
 	gracefulShutdown := func() {
-		log.Info("Attempting graceful shutdown of service", nil)
+		log.Info("attempting graceful shutdown of service", nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
 		defer cancel()

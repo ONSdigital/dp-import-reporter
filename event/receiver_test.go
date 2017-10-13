@@ -1,10 +1,10 @@
 package event
 
 import (
-	"errors"
 	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
+	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
@@ -84,7 +84,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 			err := receiver.ProcessMessage(kafkaMsg)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, errMock)
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "handler.HandleEvent returned an error").Error())
 			})
 
 			Convey("And handler.HandleEvent is called once with the expected parameters", func() {

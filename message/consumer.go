@@ -41,13 +41,14 @@ func (c *MessageConsumer) Listen() {
 		for {
 			select {
 			case eventMsg := <-c.consumer.Incoming():
+				log.Info("consumer: incoming received a message", nil)
 				if err := c.eventReceiver.ProcessMessage(eventMsg); err != nil {
-					log.ErrorC("unexpected error returned from eventReceiver.ProcessMessage, event message will not be committed to consumer group", err, nil)
+					log.ErrorC("error returned from eventReceiver.ProcessMessage event message will not be committed to consumer group", err, nil)
 					continue
 				}
 				eventMsg.Commit()
 			case <-c.ctx.Done():
-				log.Info("attempting to close down consumer", nil)
+				log.Info("consumer: attempting to close down consumer", nil)
 				return
 			}
 		}
@@ -70,9 +71,9 @@ func (c MessageConsumer) Close(ctx context.Context) {
 	// Wait for the consumer to tell is has exited or the context timeout occurs.
 	select {
 	case <-c.closed:
-		log.Info("gracefully shutdown consumer loop", nil)
+		log.Info("consumer: gracefully shutdown consumer loop", nil)
 	case <-ctx.Done():
-		log.Info("forced shutdown of consumer loop", nil)
+		log.Info("consumer: forced shutdown of consumer loop", nil)
 	}
 }
 

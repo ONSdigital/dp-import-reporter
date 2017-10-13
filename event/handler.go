@@ -3,25 +3,16 @@ package event
 import (
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/pkg/errors"
 	"time"
 )
 
 //go:generate moq -out ../mocks/event_generated_mocks.go -pkg mocks . DatasetAPICli Cache EventHandler
 
 const (
-	failed                    = "failed"
-	errorType                 = "error"
-	datasetAPIGetInstErr      = "datasetAPI.GetInstance return an error"
-	datasetAPIAddEventErr     = "datasetAPI.AddEventToInstance return an error"
-	datasetAPIUpdateStatusErr = "datasetAPI.UpdateInstanceStatus return an error"
-	eventNotInCache           = "report event not found in cache, checking dataset API"
-	eventNotInInstance        = "report not found in instance.events, updating dataset api"
-	updatingDSInstance        = "updating dataset api to set instance.status to failed"
-	addingToLocalCache        = "adding report event to local cache"
-	updatingCacheTimeout      = "report event found in cache, updating cache expiry time"
-	handlingEvent             = "Handling report event"
-	reportEventKey            = "reportEvent"
-	generateCacheKeyValueErr  = "error while attempting to generate cache key value for report event"
+	failed         = "failed"
+	errorType      = "error"
+	reportEventKey = "reportEvent"
 )
 
 var (
@@ -54,20 +45,18 @@ type Handler struct {
 // already exist) & add to the local cache, otherwise update the cache time to live.
 func (r Handler) HandleEvent(e *model.ReportEvent) error {
 	logDetails := log.Data{reportEventKey: *e}
-	log.Info(handlingEvent, logDetails)
+	log.Info("handler: handling report event", logDetails)
 
 	key, value, err := e.GenCacheKeyAndValue()
 	if err != nil {
-		log.ErrorC(generateCacheKeyValueErr, err, logDetails)
-		return err
+		return errors.Wrap(err, "error while attempting to generate cache key value for report event")
 	}
 
 	if _, err := r.Cache.Get(key); err != nil {
-		log.Info(eventNotInCache, logDetails)
+		log.Info("handler: report event not found in dp-import-reporter cache, retrieving instance from dataset API", logDetails)
 		i, err := r.DatasetAPI.GetInstance(e.InstanceID)
 		if err != nil {
-			log.ErrorC(datasetAPIGetInstErr, err, logDetails)
-			return err
+			return errors.Wrap(err, "datasetAPI.GetInstance return an error")
 		}
 
 		timeNow := time.Now()
@@ -79,28 +68,25 @@ func (r Handler) HandleEvent(e *model.ReportEvent) error {
 		}
 
 		if !i.ContainsEvent(newEvent) {
-			log.Info(eventNotInInstance, logDetails)
+			log.Info("handler: report event not in instance.events, adding event to instance and persisting changes to dataset api", logDetails)
 
 			if err := r.DatasetAPI.AddEventToInstance(i.InstanceID, newEvent); err != nil {
-				log.ErrorC(datasetAPIAddEventErr, err, logDetails)
-				return err
+				return errors.Wrap(err, "datasetAPI.AddEventToInstance returned an error")
 			}
 			if e.EventType == errorType && i.State != failed {
-				log.Info(updatingDSInstance, logDetails)
+				log.Info("handler: updating instance.status to failed and persisting changes to dataset api", logDetails)
 
 				if err := r.DatasetAPI.UpdateInstanceStatus(i.InstanceID, statusFailed); err != nil {
-					log.ErrorC(datasetAPIUpdateStatusErr, err, logDetails)
-					return err
+					return errors.Wrap(err, "datasetAPI.UpdateInstanceStatus return an error")
 				}
 			}
 		}
 
-		log.Info(addingToLocalCache, logDetails)
+		log.Info("handler: adding report event to dp-import-reporter cache", logDetails)
 		r.Cache.Set(key, value, r.ExpireSeconds)
 		return nil
 	}
-	log.Info(updatingCacheTimeout, logDetails)
-
+	log.Info("handler: report event found in dp-import-reporter cache, updating cache expiry time", logDetails)
 	// If the key exists in the cache delete it and set it again to reset the time to live
 	r.Cache.Del(key)
 	r.Cache.Set(key, value, r.ExpireSeconds)

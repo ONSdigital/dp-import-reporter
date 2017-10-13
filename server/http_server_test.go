@@ -11,7 +11,7 @@ import (
 func TestDropCache(t *testing.T) {
 	Convey("Given a valid request & response", t, func() {
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodPost, dropCachePath, nil)
+		r := httptest.NewRequest(http.MethodPost, "/dropcache", nil)
 
 		cacheMock := &mocks.ClearableCacheMock{
 			ClearFunc: func() {
@@ -37,7 +37,7 @@ func TestDropCache(t *testing.T) {
 func TestHealthCheck(t *testing.T) {
 	Convey("Given a valid request & response", t, func() {
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, healthCheckPath, nil)
+		r := httptest.NewRequest(http.MethodGet, "/healthcheck", nil)
 
 		Convey("When HealthCheck is invoked", func() {
 			HealthCheck(w, r)

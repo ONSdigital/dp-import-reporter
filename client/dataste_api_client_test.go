@@ -7,9 +7,10 @@ import (
 
 	"bytes"
 	"encoding/json"
-	"errors"
+
 	"fmt"
 	"github.com/ONSdigital/dp-import-reporter/model"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -79,7 +80,7 @@ func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, errMock))
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "GetInstance: HTTPClient.doRequest returned an error").Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
@@ -111,7 +112,9 @@ func TestDatasetAPIClientGetInstanceHttpStatus(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, newDatasetAPIError(unexpectedHTTPStatus))
+
+				url := fmt.Sprintf(getInstanceURL, host, testInstanceID)
+				So(err.Error(), ShouldEqual, incorrectStatusError("GetInstance", url, http.MethodGet, 200, http.StatusBadRequest).Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
@@ -147,7 +150,7 @@ func TestDatasetAPIClientGetInstanceResponseBodyReadErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err, ShouldResemble, wrappedDatasetAPIError(readResponseBodyErr, errMock))
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "GetInstance error while attempting to read HTTP response body").Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
@@ -165,7 +168,7 @@ func TestDatasetAPIClientGetInstanceResponseBodyReadErr(t *testing.T) {
 }
 
 func TestDatasetAPIClientGetInstanceUnmarshallErr(t *testing.T) {
-	Convey("Given unmarshalling the response body returns an error", t, func() {
+	Convey("Given that unmarshalling the response body returns an error", t, func() {
 
 		body := []byte("This is not a valid response")
 		respBodyReader, response, httpClient, cli := setup(body, http.StatusOK)
@@ -181,7 +184,7 @@ func TestDatasetAPIClientGetInstanceUnmarshallErr(t *testing.T) {
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
 				So(err, ShouldNotBeNil)
-				So(strings.Contains(err.Error(), unmarshalResponseErr), ShouldBeTrue)
+				So(strings.Contains(err.Error(), "GetInstance error while attempting to unmarshal HTTP response body into model.Instance"), ShouldBeTrue)
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
@@ -206,7 +209,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 			err := cli.AddEventToInstance("", nil)
 
 			Convey("Then the DatasetAPI returns the expected error", func() {
-				So(err, ShouldResemble, newDatasetAPIError(instanceIDNil))
+				So(err.Error(), ShouldResemble, errors.Wrap(validationErr, "AddEventToInstance requires a non empty instanceID").Error())
 			})
 
 			Convey("And httpClient.Do is never called", func() {
@@ -222,7 +225,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 			err := cli.AddEventToInstance(testInstanceID, nil)
 
 			Convey("Then the DatasetAPI returns the expected error", func() {
-				So(err, ShouldResemble, newDatasetAPIError(eventNil))
+				So(err.Error(), ShouldResemble, errors.Wrap(validationErr, "AddEventToInstance requires a non empty event").Error())
 			})
 
 			Convey("And httpClient.Do is never called", func() {
@@ -244,7 +247,7 @@ func TestDatasetAPIClientAddEventToInstanceHttpCliErr(t *testing.T) {
 			err := cli.AddEventToInstance(testInstanceID, event)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, errMock))
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "AddEventToInstance HTTPClient.doRequest returned an error").Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time", func() {
@@ -266,7 +269,8 @@ func TestDatasetAPIClientAddEventToInstanceUnexpectedStatus(t *testing.T) {
 			err := cli.AddEventToInstance(testInstanceID, event)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, newDatasetAPIError(unexpectedHTTPStatus))
+				url := fmt.Sprintf(addInstanceEventURL, host, testInstanceID)
+				So(err.Error(), ShouldEqual, incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusCreated, http.StatusBadRequest).Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time", func() {
@@ -308,7 +312,7 @@ func TestDatasetAPIClientUpdateInstanceStatusInvalidParams(t *testing.T) {
 			err := cli.UpdateInstanceStatus("", nil)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, newDatasetAPIError(instanceIDNil))
+				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "UpdateInstanceStatus requires a non empty instanceID").Error())
 			})
 
 			Convey("And httpClient.Do is never invoked", func() {
@@ -320,7 +324,7 @@ func TestDatasetAPIClientUpdateInstanceStatusInvalidParams(t *testing.T) {
 			err := cli.UpdateInstanceStatus(testInstanceID, nil)
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, newDatasetAPIError(stateNil))
+				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "UpdateInstanceStatus requires a non nil state").Error())
 			})
 
 			Convey("And httpClient.Do is never invoked", func() {
@@ -341,7 +345,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 				So(err, ShouldBeNil)
 			})
 
-			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
+			Convey("And httpClient.Do is called once with the expected parameters", func() {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
@@ -355,7 +359,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, wrappedDatasetAPIError(httpClientDoErr, errMock))
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "UpdateInstanceStatus HTTPClient.doRequest returned an error").Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
@@ -371,7 +375,8 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
 
 			Convey("Then the expected error is returned", func() {
-				So(err, ShouldResemble, newDatasetAPIError(unexpectedHTTPStatus))
+				url := fmt.Sprintf(putInstanceStateURL, host, testInstanceID)
+				So(err.Error(), ShouldEqual, incorrectStatusError("UpdateInstanceStatus", url, http.MethodPut, http.StatusOK, http.StatusBadRequest).Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
@@ -396,7 +401,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, newDatasetAPIError(hostEmpty))
+				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non empty host required").Error())
 			})
 		})
 	})
@@ -409,7 +414,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, newDatasetAPIError(authTokenEmpty))
+				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non empty authToken required").Error())
 			})
 		})
 	})
@@ -422,7 +427,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, newDatasetAPIError(httpClientNil))
+				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non nil HTTPClient required").Error())
 			})
 		})
 	})
@@ -435,7 +440,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err, ShouldResemble, newDatasetAPIError(responseBodyReaderNil))
+				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non nil ResponseBodyReader required").Error())
 			})
 		})
 	})

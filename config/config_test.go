@@ -1,15 +1,15 @@
 package config
 
 import (
-	"testing"
+	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
-	"errors"
+	"testing"
 	"time"
 )
 
 var (
 	expectedConfig = &Config{
-		ReportEventTopic:        "event-reporter",
+		ReportEventTopic:        "report-events",
 		Brokers:                 []string{"localhost:9092"},
 		DatasetAPIURL:           "http://localhost:21800",
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
@@ -18,6 +18,8 @@ var (
 		CacheExpiry:             60,
 		GracefulShutdownTimeout: time.Second * 5,
 	}
+
+	errMock = errors.New("boom")
 )
 
 type processConfigMock struct {
@@ -73,14 +75,14 @@ func TestConfigNilErr(t *testing.T) {
 
 		Convey("When processConfig returns an error", func() {
 			mockProcessCgf := newProcessConfigMock()
-			mockProcessCgf.err = errors.New("Boom!")
+			mockProcessCgf.err = errMock
 			processConfig = mockProcessCgf.Process
 
 			actual, err := Get()
 
 			Convey("Then the nil and the expected error are returned", func() {
 				So(actual, ShouldBeNil)
-				So(err, ShouldResemble, errors.New("Boom!"))
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "config: error while attempting to load environment config").Error())
 			})
 
 			Convey("And processConfig is called 1 time with expected parameters", func() {
