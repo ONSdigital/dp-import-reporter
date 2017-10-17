@@ -11,7 +11,7 @@ var (
 	expectedConfig = &Config{
 		ReportEventTopic:        "report-events",
 		Brokers:                 []string{"localhost:9092"},
-		DatasetAPIURL:           "http://localhost:21800",
+		DatasetAPIURL:           "http://localhost:22000",
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:             ":22200",
 		CacheSize:               100 * 1024 * 1024,

@@ -45,7 +45,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 				So(err, ShouldBeNil)
 			})
 
-			Convey("And handler.HandleEvent is called once with the expected parameters", func() {
+			Convey("And Handler.HandleEvent is called once with the expected parameters", func() {
 				params := handler.HandleEventCalls()
 				So(len(params), ShouldEqual, 1)
 				So(params[0].E, ShouldResemble, e)
@@ -65,7 +65,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 				So(err, ShouldNotBeNil)
 			})
 
-			Convey("And handler.HandleEvent is never called", func() {
+			Convey("And Handler.HandleEvent is never called", func() {
 				So(len(handler.HandleEventCalls()), ShouldEqual, 0)
 			})
 		})
@@ -84,10 +84,10 @@ func TestReceiverProcessMessage(t *testing.T) {
 			err := receiver.ProcessMessage(kafkaMsg)
 
 			Convey("Then the expected error is returned", func() {
-				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "handler.HandleEvent returned an error").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "Handler.HandleEvent returned an error").Error())
 			})
 
-			Convey("And handler.HandleEvent is called once with the expected parameters", func() {
+			Convey("And Handler.HandleEvent is called once with the expected parameters", func() {
 				params := handler.HandleEventCalls()
 				So(len(params), ShouldEqual, 1)
 				So(params[0].E, ShouldResemble, e)

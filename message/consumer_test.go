@@ -29,7 +29,7 @@ func TestMessageConsumerListen(t *testing.T) {
 			avro, _ := schema.ReportEventSchema.Marshal(reportEvent)
 			kafkaMsg, incoming, kafkaConsumer, receiver := setUp(onCommit, avro, nil)
 
-			consumer := NewMessageConsumer(kafkaConsumer, receiver)
+			consumer := NewConsumer(kafkaConsumer, receiver, time.Second*10)
 			consumer.Listen()
 			defer consumer.Close(nil)
 
@@ -72,7 +72,7 @@ func TestMessageConsumerListen(t *testing.T) {
 				},
 			}
 
-			consumer := NewMessageConsumer(kafkaConsumer, receiverMock)
+			consumer := NewConsumer(kafkaConsumer, receiverMock, time.Second*10)
 			consumer.Listen()
 
 			incoming <- kafkaMsg

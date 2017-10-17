@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-import-reporter/logging"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
@@ -16,6 +17,7 @@ type ClearableCache interface {
 }
 
 var httpServer *server.Server
+var logger = logging.Logger{"sever.HTTPServer"}
 
 func Start(cache ClearableCache, bindAdd string, errorChan chan error) {
 	router := mux.NewRouter()
@@ -28,7 +30,7 @@ func Start(cache ClearableCache, bindAdd string, errorChan chan error) {
 	httpServer.HandleOSSignals = false
 
 	go func() {
-		log.Info("starting import-reporter HTTP server", log.Data{
+		log.Info("[HTTPServer]: starting import-reporter HTTP server", log.Data{
 			"/healthcheck": http.MethodGet,
 			"/dropcache":   http.MethodPost,
 		})
@@ -40,18 +42,18 @@ func Start(cache ClearableCache, bindAdd string, errorChan chan error) {
 
 func ClearCache(cache ClearableCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info("dropping import-reporter cache", nil)
+		logger.Info("dropping import-reporter cache", nil)
 		cache.Clear()
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
-	log.Info("health check endpoint", nil)
+	logger.Info("health check endpoint", nil)
 	w.WriteHeader(http.StatusOK)
 }
 
 func Shutdown(ctx context.Context) {
 	httpServer.Shutdown(ctx)
-	log.Info("http server: graceful shutdown complete", nil)
+	logger.Info("graceful shutdown complete", nil)
 }

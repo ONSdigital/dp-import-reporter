@@ -53,13 +53,14 @@ func TestHandleEventNotInCacheOrDatasetAPI(t *testing.T) {
 				So(addCalls[0].E.Message, ShouldEqual, e.EventMsg)
 				So(addCalls[0].E.Type, ShouldEqual, e.EventType)
 				So(addCalls[0].E.MessageOffset, ShouldEqual, "0")
+				So(addCalls[0].E.Service, ShouldEqual, e.ServiceName)
 
 				updateCalls := datasetAPI.UpdateInstanceStatusCalls()
 				So(len(updateCalls), ShouldEqual, 1)
 				So(updateCalls[0].State, ShouldResemble, statusFailed)
 			})
 
-			Convey("And the Cache is called as expected with the expected parameters", func() {
+			Convey("And the cache is called as expected with the expected parameters", func() {
 				So(len(cacheMock.SetCalls()), ShouldEqual, 1)
 
 				key, val, _ := e.GenCacheKeyAndValue()
@@ -87,7 +88,7 @@ func TestReportEventHandlerHandleEventEventInCache(t *testing.T) {
 
 		var handlerErrors error
 
-		Convey("When the cache contains the e being handled", func() {
+		Convey("When the cache contains the event being handled", func() {
 			handlerErrors = reportEventHandler.HandleEvent(e)
 		})
 
@@ -95,7 +96,7 @@ func TestReportEventHandlerHandleEventEventInCache(t *testing.T) {
 			So(handlerErrors, ShouldBeNil)
 		})
 
-		Convey("And no calls are made to the DatasetAPI", func() {
+		Convey("And no calls are made to the datasetAPI", func() {
 			So(len(datasetAPI.GetInstanceCalls()), ShouldEqual, 0)
 			So(len(datasetAPI.AddEventToInstanceCalls()), ShouldEqual, 0)
 			So(len(datasetAPI.UpdateInstanceStatusCalls()), ShouldEqual, 0)

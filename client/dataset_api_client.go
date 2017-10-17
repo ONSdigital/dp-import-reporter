@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ONSdigital/dp-import-reporter/logging"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/pkg/errors"
@@ -29,6 +30,7 @@ const (
 
 var (
 	validationErr = errors.New("dataset api client validation error")
+	logger        = logging.Logger{Prefix: "client.DatasetAPI"}
 )
 
 // HTTPClient defines a client for making http requests.
@@ -86,7 +88,7 @@ func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, er
 
 	resp, err := cli.doRequest(url, http.MethodGet, nil, logData)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetInstance: HTTPClient.doRequest returned an error")
+		return nil, errors.Wrap(err, "GetInstance HTTPClient.doRequest returned an error")
 	}
 
 	defer resp.Body.Close()
@@ -104,7 +106,7 @@ func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, er
 	if err := json.Unmarshal(body, &instance); err != nil {
 		return nil, errors.Wrap(err, "GetInstance error while attempting to unmarshal HTTP response body into model.Instance")
 	}
-	log.Info("datasetAPIClient: GetInstance completed successfully", log.Data{instanceKey: instance})
+	logger.Info("GetInstance completed successfully", log.Data{instanceKey: instance})
 	return &instance, err
 }
 
@@ -133,7 +135,7 @@ func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Even
 	if resp.StatusCode != http.StatusCreated {
 		return incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusCreated, resp.StatusCode)
 	}
-	log.Info("datasetAPIClient: AddEventToInstance completed successfully", logData)
+	logger.Info("AddEventToInstance completed successfully", logData)
 	return nil
 }
 
@@ -162,7 +164,7 @@ func (cli *DatasetAPIClient) UpdateInstanceStatus(instanceID string, state *mode
 	if resp.StatusCode != http.StatusOK {
 		return incorrectStatusError("UpdateInstanceStatus", url, http.MethodPut, http.StatusOK, resp.StatusCode)
 	}
-	log.Info("datasetAPIClient: UpdateInstanceStatus completed successfully", logData)
+	logger.Info("UpdateInstanceStatus completed successfully", logData)
 	return nil
 }
 
@@ -177,9 +179,9 @@ func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload in
 	logData[httpMethodKey] = httpMethod
 
 	if payload != nil {
-		logData[requestBodyKey] = payload
-
 		body, err = json.Marshal(payload)
+		logData[requestBodyKey] = string(body)
+
 		if err != nil {
 			log.Error(err, logData)
 			return nil, errors.Wrap(err, fmt.Sprintf("error when attempting to marshal %s to json", reflect.TypeOf(payload).Name()))
@@ -197,12 +199,12 @@ func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload in
 
 	req.Header.Set(authTokenHeader, cli.authToken)
 
-	log.Info("datasetAPIClient: making HTTP request", logData)
+	logger.Info("making HTTP request", logData)
 	resp, err := cli.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("datasetAPIClient: HTTP response received", nil)
+	logger.Info("HTTP response received", nil)
 	return resp, nil
 }
 

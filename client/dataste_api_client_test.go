@@ -80,7 +80,7 @@ func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
-				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "GetInstance: HTTPClient.doRequest returned an error").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "GetInstance HTTPClient.doRequest returned an error").Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
@@ -208,7 +208,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 		Convey("When AddEventToInstance is called", func() {
 			err := cli.AddEventToInstance("", nil)
 
-			Convey("Then the DatasetAPI returns the expected error", func() {
+			Convey("Then the datasetAPI returns the expected error", func() {
 				So(err.Error(), ShouldResemble, errors.Wrap(validationErr, "AddEventToInstance requires a non empty instanceID").Error())
 			})
 
@@ -224,7 +224,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 		Convey("When AddEventToInstance is called", func() {
 			err := cli.AddEventToInstance(testInstanceID, nil)
 
-			Convey("Then the DatasetAPI returns the expected error", func() {
+			Convey("Then the datasetAPI returns the expected error", func() {
 				So(err.Error(), ShouldResemble, errors.Wrap(validationErr, "AddEventToInstance requires a non empty event").Error())
 			})
 

@@ -10,6 +10,7 @@ import (
 	"github.com/ONSdigital/dp-import-reporter/client"
 	"github.com/ONSdigital/dp-import-reporter/config"
 	"github.com/ONSdigital/dp-import-reporter/event"
+	"github.com/ONSdigital/dp-import-reporter/logging"
 	"github.com/ONSdigital/dp-import-reporter/message"
 	"github.com/ONSdigital/dp-import-reporter/server"
 	"github.com/ONSdigital/go-ns/kafka"
@@ -20,8 +21,16 @@ import (
 	"net/http"
 )
 
+var logger = logging.Logger{Prefix: "main"}
+
+type ResponseBodyReader struct{}
+
+func (r ResponseBodyReader) Read(reader io.Reader) ([]byte, error) {
+	return ioutil.ReadAll(reader)
+}
+
 func main() {
-	log.Namespace = "dp-event-reporter"
+	log.Namespace = "dp-import-reporter"
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
@@ -29,11 +38,11 @@ func main() {
 
 	cfg, err := config.Get()
 	if err != nil {
-		log.ErrorC("config.get retruned error", err, nil)
+		log.ErrorC("config.get returned error", err, nil)
 		os.Exit(1)
 	}
 
-	log.Info("dp-import-reporter config", log.Data{
+	logger.Info("successfully loaded dp-import-reporter configuration", log.Data{
 		"config": cfg,
 	})
 
@@ -50,14 +59,12 @@ func main() {
 	server.Start(cache, cfg.BindAddress, errorChannel)
 
 	reportEventHandler := event.Handler{
+		ExpireSeconds: cfg.CacheExpiry,
 		Cache:         cache,
 		DatasetAPI:    datasetAPIClient,
-		ExpireSeconds: cfg.CacheExpiry,
 	}
 
-	eventReceiver := &event.Receiver{
-		Handler: reportEventHandler,
-	}
+	eventReceiver := &event.Receiver{Handler: reportEventHandler}
 
 	// create the report event kafka kafkaConsumer.
 	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.ReportEventTopic, log.Namespace, kafka.OffsetNewest)
@@ -67,36 +74,29 @@ func main() {
 	}
 
 	// create event kafkaConsumer.
-	reportEventConsumer := message.NewMessageConsumer(kafkaConsumer, eventReceiver)
+	reportEventConsumer := message.NewConsumer(kafkaConsumer, eventReceiver, cfg.GracefulShutdownTimeout)
+
 	reportEventConsumer.Listen()
 
-	// shutdown all the things.
-	gracefulShutdown := func() {
-		log.Info("attempting graceful shutdown of service", nil)
-
-		ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
-		defer cancel()
-
-		reportEventConsumer.Close(ctx)
-		kafkaConsumer.Close(ctx)
-		server.Shutdown(ctx)
-	}
-
-	// block until shutdown event happens...
+	// block until a shutdown event happens
 	select {
-	case <-signals:
-		gracefulShutdown()
+	case sig := <-signals:
+		logger.Info("os signal received commencing graceful shutdown", log.Data{"signal": sig.String()})
 	case err := <-kafkaConsumer.Errors():
-		log.ErrorC("kafkaConsumer error chan received error commencing graceful shutdown", err, nil)
-		gracefulShutdown()
+		logger.ErrorC("kafkaConsumer errors chan received an error commencing graceful shutdown", err, nil)
 	case err := <-errorChannel:
-		log.ErrorC("errors channel received error commencing graceful shutdown", err, nil)
-		gracefulShutdown()
+		logger.ErrorC("errors channel received an error commencing graceful shutdown", err, nil)
 	}
-}
 
-type ResponseBodyReader struct{}
+	logger.Info("attempting graceful shutdown of service", nil)
 
-func (r ResponseBodyReader) Read(reader io.Reader) ([]byte, error) {
-	return ioutil.ReadAll(reader)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
+	defer cancel()
+
+	reportEventConsumer.Close(ctx)
+	kafkaConsumer.Close(ctx)
+	server.Shutdown(ctx)
+
+	logger.Info("shutdown complete", nil)
+	os.Exit(1)
 }
