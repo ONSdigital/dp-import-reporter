@@ -12,7 +12,7 @@ type Config struct {
 	ReportEventTopic        string        `envconfig:"CONSUMER_TOPIC"`
 	Brokers                 []string      `envconfig:"KAFKA_ADDR"`
 	DatasetAPIURL           string        `envconfig:"DATASET_API_URL"`
-	DatasetAPIAuthToken     string        `envconfig:"DATASET_AUTH_TOKEN"`
+	DatasetAPIAuthToken     string        `envconfig:"DATASET_API_AUTH_TOKEN"`
 	BindAddress             string        `envconfig:"BIND_ADDR"`
 	CacheSize               int           `envconfig:"CACHE_SIZE"`
 	CacheExpiry             int           `envconfig:"CACHE_EXPIRY"`
