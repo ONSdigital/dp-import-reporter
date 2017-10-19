@@ -1,4 +1,4 @@
-dp-repo-template
+dp-import-reporter
 ================
 
 ### Getting started
