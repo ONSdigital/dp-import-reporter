@@ -22,7 +22,7 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 		})
 	})
 
-	Convey("Given a reportEvent with an empty instanceID", t, func() {
+	Convey("Given a reportEvent with an empty InstanceID", t, func() {
 		reportEvent := &ReportEvent{}
 
 		Convey("When GenCacheKeyAndValue is invoked", func() {
@@ -36,7 +36,7 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 		})
 	})
 
-	Convey("Given a reportEvent with an empty eventType", t, func() {
+	Convey("Given a reportEvent with an empty EventType", t, func() {
 		reportEvent := &ReportEvent{InstanceID: "666"}
 
 		Convey("When GenCacheKeyAndValue is invoked", func() {
@@ -50,7 +50,7 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 		})
 	})
 
-	Convey("Given a reportEvent with an empty serviceName", t, func() {
+	Convey("Given a reportEvent with an empty ServiceName", t, func() {
 		reportEvent := &ReportEvent{
 			InstanceID: "666",
 			EventType:  "error",
@@ -80,9 +80,9 @@ func TestReportEventGenCacheKeyAndValue(t *testing.T) {
 
 			Convey("Then the expected error, key and value are returned", func() {
 				expectedKey, _ := json.Marshal(&cacheKey{
-					instanceID:  reportEvent.InstanceID,
-					eventType:   reportEvent.EventType,
-					serviceName: reportEvent.ServiceName,
+					InstanceID:  reportEvent.InstanceID,
+					EventType:   reportEvent.EventType,
+					ServiceName: reportEvent.ServiceName,
 				})
 
 				expectedVal, _ := json.Marshal(reportEvent)

@@ -9,15 +9,15 @@ import (
 
 const (
 	reportEventNil              = "reportEvent.GenCacheKeyAndValue requires non nil reportEvent"
-	reportEventInstanceIDEmpty  = "reportEvent.GenCacheKeyAndValue requires a non empty instanceID"
-	reportEventTypeEmpty        = "reportEvent.GenCacheKeyAndValue requires a non empty eventType"
-	reportEventServiceNameEmpty = "reportEvent.GenCacheKeyAndValue requires a non empty serviceName"
+	reportEventInstanceIDEmpty  = "reportEvent.GenCacheKeyAndValue requires a non empty InstanceID"
+	reportEventTypeEmpty        = "reportEvent.GenCacheKeyAndValue requires a non empty EventType"
+	reportEventServiceNameEmpty = "reportEvent.GenCacheKeyAndValue requires a non empty ServiceName"
 )
 
 type cacheKey struct {
-	instanceID  string
-	serviceName string
-	eventType   string
+	InstanceID  string
+	ServiceName string
+	EventType   string
 }
 
 func (e *ReportEvent) GenCacheKeyAndValue() ([]byte, []byte, error) {
@@ -35,9 +35,9 @@ func (e *ReportEvent) GenCacheKeyAndValue() ([]byte, []byte, error) {
 	}
 
 	cacheKey := &cacheKey{
-		instanceID:  e.InstanceID,
-		eventType:   e.EventType,
-		serviceName: e.ServiceName,
+		InstanceID:  e.InstanceID,
+		EventType:   e.EventType,
+		ServiceName: e.ServiceName,
 	}
 
 	key, err := json.Marshal(cacheKey)
@@ -85,7 +85,7 @@ func (i *Instance) ContainsEvent(target *Event) bool {
 //Event struct including the time
 type Event struct {
 	Type          string     `bson:"type,omitempty"           json:"type"`
-	Service       string     `bson:"serviceName,omitempty"    json:"serviceName"`
+	Service       string     `bson:"service,omitempty"    	  json:"service"`
 	Time          *time.Time `bson:"time,omitempty"           json:"time"`
 	Message       string     `bson:"message,omitempty"        json:"message"`
 	MessageOffset string     `bson:"message_offset,omitempty" json:"message_offset"`
