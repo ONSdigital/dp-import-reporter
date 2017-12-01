@@ -10,6 +10,7 @@ import (
 // Config struct to hold application configuration.
 type Config struct {
 	ReportEventTopic        string        `envconfig:"CONSUMER_TOPIC"`
+	ReportEventGroup        string        `envconfig:"CONSUMER_GROUP"`
 	Brokers                 []string      `envconfig:"KAFKA_ADDR"`
 	DatasetAPIURL           string        `envconfig:"DATASET_API_URL"`
 	DatasetAPIAuthToken     string        `envconfig:"DATASET_API_AUTH_TOKEN"`
@@ -29,6 +30,7 @@ func Get() (*Config, error) {
 
 	config = &Config{
 		ReportEventTopic:        "report-events",
+		ReportEventGroup:        "dp-import-reporter",
 		Brokers:                 []string{"localhost:9092"},
 		DatasetAPIURL:           "http://localhost:22000",
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",

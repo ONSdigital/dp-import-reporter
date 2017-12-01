@@ -67,7 +67,7 @@ func main() {
 	eventReceiver := &event.Receiver{Handler: reportEventHandler}
 
 	// create the report event kafka kafkaConsumer.
-	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.ReportEventTopic, log.Namespace, kafka.OffsetNewest)
+	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.ReportEventTopic, cfg.ReportEventGroup, kafka.OffsetNewest)
 	if err != nil {
 		log.ErrorC("error while attempting to create kafka kafkaConsumer", err, nil)
 		os.Exit(1)
