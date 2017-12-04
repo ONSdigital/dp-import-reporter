@@ -9,6 +9,7 @@ import (
 
 var (
 	expectedConfig = &Config{
+		ReportEventGroup:        "dp-import-reporter",
 		ReportEventTopic:        "report-events",
 		Brokers:                 []string{"localhost:9092"},
 		DatasetAPIURL:           "http://localhost:22000",
