@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"reflect"
+
 	"github.com/ONSdigital/dp-import-reporter/logging"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/pkg/errors"
-	"io"
-	"net/http"
-	"reflect"
 )
 
 //go:generate moq -out ../mocks/dataset_api_generated_mocks.go -pkg mocks . HTTPClient ResponseBodyReader
@@ -20,6 +21,7 @@ const (
 	putInstanceStateURL = getInstanceURL
 	addInstanceEventURL = "%s/instances/%s/events"
 	authTokenHeader     = "Internal-Token"
+	authorizationHeader = "Authorization"
 	uriKey              = "uri"
 	instanceKey         = "instance"
 	instanceIDKey       = "instanceID"
@@ -29,7 +31,7 @@ const (
 )
 
 var (
-	validationErr = errors.New("dataset api client validation error")
+	errValidation = errors.New("dataset api client validation error")
 	logger        = logging.Logger{Prefix: "client.DatasetAPI"}
 )
 
@@ -45,39 +47,46 @@ type ResponseBodyReader interface {
 
 // DatasetAPIClient client for making http requests to the Dataset API.
 type DatasetAPIClient struct {
-	host           string
-	authToken      string
-	httpClient     HTTPClient
-	responseReader ResponseBodyReader
+	authToken           string
+	datasetAPIAuthToken string
+	host                string
+	httpClient          HTTPClient
+	responseReader      ResponseBodyReader
 }
 
 // NewDatasetAPIClient create a new DatasetAPIClient using the supplied configuration
-func NewDatasetAPIClient(host string, authToken string, httpCli HTTPClient, respBodyReader ResponseBodyReader) (*DatasetAPIClient, error) {
-	if len(host) == 0 {
-		return nil, errors.Wrap(validationErr, "non empty host required")
-	}
+func NewDatasetAPIClient(authToken string, host string, datasetAPIAuthToken string, httpCli HTTPClient, respBodyReader ResponseBodyReader) (*DatasetAPIClient, error) {
+
 	if len(authToken) == 0 {
-		return nil, errors.Wrap(validationErr, "non empty authToken required")
+		return nil, errors.Wrap(errValidation, "non empty service authToken required")
+	}
+	if len(host) == 0 {
+		return nil, errors.Wrap(errValidation, "non empty host required")
+	}
+	// TODO Remove check for dataset api auth token as we now only require an auth token for the "Authorization" header
+	if len(datasetAPIAuthToken) == 0 {
+		return nil, errors.Wrap(errValidation, "non empty dataset API authToken required")
 	}
 	if httpCli == nil {
-		return nil, errors.Wrap(validationErr, "non nil HTTPClient required")
+		return nil, errors.Wrap(errValidation, "non nil HTTPClient required")
 	}
 	if respBodyReader == nil {
-		return nil, errors.Wrap(validationErr, "non nil ResponseBodyReader required")
+		return nil, errors.Wrap(errValidation, "non nil ResponseBodyReader required")
 	}
 
 	return &DatasetAPIClient{
-		host:           host,
-		authToken:      authToken,
-		httpClient:     httpCli,
-		responseReader: respBodyReader,
+		authToken:           authToken,
+		datasetAPIAuthToken: datasetAPIAuthToken,
+		host:                host,
+		httpClient:          httpCli,
+		responseReader:      respBodyReader,
 	}, nil
 }
 
 // GetInstance make a HTTP GET request to the Dataset API to get the specified Instance
 func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, error) {
 	if len(instanceID) == 0 {
-		return nil, errors.Wrap(validationErr, "GetInstance requires a non empty instanceID")
+		return nil, errors.Wrap(errValidation, "GetInstance requires a non empty instanceID")
 	}
 	url := fmt.Sprintf(getInstanceURL, cli.host, instanceID)
 
@@ -103,7 +112,7 @@ func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, er
 	}
 
 	var instance model.Instance
-	if err := json.Unmarshal(body, &instance); err != nil {
+	if err = json.Unmarshal(body, &instance); err != nil {
 		return nil, errors.Wrap(err, "GetInstance error while attempting to unmarshal HTTP response body into model.Instance")
 	}
 	logger.Info("GetInstance completed successfully", log.Data{instanceKey: instance})
@@ -113,10 +122,10 @@ func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, er
 // AddEventToInstance make a post request to the dataset API to add a report event to get the specified Instance
 func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Event) error {
 	if len(instanceID) == 0 {
-		return errors.Wrap(validationErr, "AddEventToInstance requires a non empty instanceID")
+		return errors.Wrap(errValidation, "AddEventToInstance requires a non empty instanceID")
 	}
 	if e == nil {
-		return errors.Wrap(validationErr, "AddEventToInstance requires a non empty event")
+		return errors.Wrap(errValidation, "AddEventToInstance requires a non empty event")
 	}
 
 	url := fmt.Sprintf(addInstanceEventURL, cli.host, instanceID)
@@ -142,10 +151,10 @@ func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Even
 // UpdateInstanceStatus send a PUT request to the dataset API to update the status of the specified instance
 func (cli *DatasetAPIClient) UpdateInstanceStatus(instanceID string, state *model.State) error {
 	if len(instanceID) == 0 {
-		return errors.Wrap(validationErr, "UpdateInstanceStatus requires a non empty instanceID")
+		return errors.Wrap(errValidation, "UpdateInstanceStatus requires a non empty instanceID")
 	}
 	if state == nil {
-		return errors.Wrap(validationErr, "UpdateInstanceStatus requires a non nil state")
+		return errors.Wrap(errValidation, "UpdateInstanceStatus requires a non nil state")
 	}
 
 	url := fmt.Sprintf(putInstanceStateURL, cli.host, instanceID)
@@ -197,7 +206,9 @@ func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload in
 		return nil, errors.Wrap(err, "error while attempting to create HTTP request")
 	}
 
-	req.Header.Set(authTokenHeader, cli.authToken)
+	// TODO Remove authTokenHeader header, now uses "Authorization" header
+	req.Header.Set(authTokenHeader, cli.datasetAPIAuthToken)
+	req.Header.Set(authorizationHeader, cli.authToken)
 
 	logger.Info("making HTTP request", logData)
 	resp, err := cli.httpClient.Do(req)

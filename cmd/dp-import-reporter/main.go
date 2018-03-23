@@ -7,6 +7,10 @@ import (
 	"runtime/debug"
 	"syscall"
 
+	"io"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/ONSdigital/dp-import-reporter/client"
 	"github.com/ONSdigital/dp-import-reporter/config"
 	"github.com/ONSdigital/dp-import-reporter/event"
@@ -16,9 +20,6 @@ import (
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/coocood/freecache"
-	"io"
-	"io/ioutil"
-	"net/http"
 )
 
 var logger = logging.Logger{Prefix: "main"}
@@ -46,7 +47,7 @@ func main() {
 		"config": cfg,
 	})
 
-	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, &http.Client{}, ResponseBodyReader{})
+	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.ServiceAuthToken, cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, &http.Client{}, ResponseBodyReader{})
 	if err != nil {
 		log.ErrorC("error creating new dataset api client", err, nil)
 		os.Exit(1)
