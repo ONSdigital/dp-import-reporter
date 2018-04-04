@@ -1,20 +1,22 @@
 package client
 
 import (
+	"testing"
+
 	"github.com/ONSdigital/dp-import-reporter/mocks"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 
 	"bytes"
 	"encoding/json"
 
 	"fmt"
-	"github.com/ONSdigital/dp-import-reporter/model"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/ONSdigital/dp-import-reporter/model"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -54,7 +56,7 @@ func TestDatasetAPIClientGetInstance(t *testing.T) {
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				So(len(httpClient.DoCalls()), ShouldEqual, 1)
 				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader.Read is called 1 time with the expected parameters", func() {
@@ -86,7 +88,7 @@ func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				So(len(httpClient.DoCalls()), ShouldEqual, 1)
 				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader is never invoked", func() {
@@ -120,7 +122,7 @@ func TestDatasetAPIClientGetInstanceHttpStatus(t *testing.T) {
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				So(len(httpClient.DoCalls()), ShouldEqual, 1)
 				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader is never invoked", func() {
@@ -156,7 +158,7 @@ func TestDatasetAPIClientGetInstanceResponseBodyReadErr(t *testing.T) {
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				So(len(httpClient.DoCalls()), ShouldEqual, 1)
 				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader is called 1 time with the expected parameters", func() {
@@ -190,7 +192,7 @@ func TestDatasetAPIClientGetInstanceUnmarshallErr(t *testing.T) {
 			Convey("And httpClient.Do is called 1 time with the expected parameters", func() {
 				So(len(httpClient.DoCalls()), ShouldEqual, 1)
 				So(httpClient.DoCalls()[0].Req.URL.String(), ShouldEqual, "http://localhost:8080/instances/"+testInstanceID)
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 
 			Convey("And responseBodyReader is called 1 time with the expected parameters", func() {
@@ -209,7 +211,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 			err := cli.AddEventToInstance("", nil)
 
 			Convey("Then the datasetAPI returns the expected error", func() {
-				So(err.Error(), ShouldResemble, errors.Wrap(validationErr, "AddEventToInstance requires a non empty instanceID").Error())
+				So(err.Error(), ShouldResemble, errors.Wrap(errValidation, "AddEventToInstance requires a non empty instanceID").Error())
 			})
 
 			Convey("And httpClient.Do is never called", func() {
@@ -225,7 +227,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 			err := cli.AddEventToInstance(testInstanceID, nil)
 
 			Convey("Then the datasetAPI returns the expected error", func() {
-				So(err.Error(), ShouldResemble, errors.Wrap(validationErr, "AddEventToInstance requires a non empty event").Error())
+				So(err.Error(), ShouldResemble, errors.Wrap(errValidation, "AddEventToInstance requires a non empty event").Error())
 			})
 
 			Convey("And httpClient.Do is never called", func() {
@@ -254,7 +256,7 @@ func TestDatasetAPIClientAddEventToInstanceHttpCliErr(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 		})
 	})
@@ -277,7 +279,7 @@ func TestDatasetAPIClientAddEventToInstanceUnexpectedStatus(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 		})
 	})
@@ -298,7 +300,7 @@ func TestDatasetAPIClientAddEventToInstance(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(addInstanceEventURL, host, testInstanceID))
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 		})
 	})
@@ -312,7 +314,7 @@ func TestDatasetAPIClientUpdateInstanceStatusInvalidParams(t *testing.T) {
 			err := cli.UpdateInstanceStatus("", nil)
 
 			Convey("Then the expected error is returned", func() {
-				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "UpdateInstanceStatus requires a non empty instanceID").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "UpdateInstanceStatus requires a non empty instanceID").Error())
 			})
 
 			Convey("And httpClient.Do is never invoked", func() {
@@ -324,7 +326,7 @@ func TestDatasetAPIClientUpdateInstanceStatusInvalidParams(t *testing.T) {
 			err := cli.UpdateInstanceStatus(testInstanceID, nil)
 
 			Convey("Then the expected error is returned", func() {
-				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "UpdateInstanceStatus requires a non nil state").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "UpdateInstanceStatus requires a non nil state").Error())
 			})
 
 			Convey("And httpClient.Do is never invoked", func() {
@@ -366,7 +368,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 		})
 
@@ -383,7 +385,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 				calls := httpClient.DoCalls()
 				So(len(calls), ShouldEqual, 1)
 				So(calls[0].Req.URL.String(), ShouldEqual, fmt.Sprintf(putInstanceStateURL, host, testInstanceID))
-				So(httpClient.DoCalls()[0].Req.Header.Get(authTokenHeader), ShouldEqual, auth)
+				So(httpClient.DoCalls()[0].Req.Header.Get(authorizationHeader), ShouldEqual, auth)
 			})
 
 		})
@@ -393,15 +395,28 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 func TestNewDatasetAPIClient(t *testing.T) {
 	responseBodyReader, _, httpClient, _ := setup([]byte{}, http.StatusOK)
 
+	Convey("Given an invalid service authToken", t, func() {
+
+		Convey("When NewDatasetAPIClient is called", func() {
+
+			cli, err := NewDatasetAPIClient("", "", "", nil, nil)
+
+			Convey("Then the expect values are returned", func() {
+				So(cli, ShouldBeNil)
+				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "non empty service authToken required").Error())
+			})
+		})
+	})
+
 	Convey("Given an invalid host", t, func() {
 
 		Convey("When NewDatasetAPIClient is called", func() {
 
-			cli, err := NewDatasetAPIClient("", "", nil, nil)
+			cli, err := NewDatasetAPIClient(auth, "", "", nil, nil)
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non empty host required").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "non empty host required").Error())
 			})
 		})
 	})
@@ -410,11 +425,11 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 		Convey("When NewDatasetAPIClient is called", func() {
 
-			cli, err := NewDatasetAPIClient(host, "", nil, nil)
+			cli, err := NewDatasetAPIClient(auth, host, "", nil, nil)
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non empty authToken required").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "non empty dataset API authToken required").Error())
 			})
 		})
 	})
@@ -423,11 +438,11 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 		Convey("When NewDatasetAPIClient is called", func() {
 
-			cli, err := NewDatasetAPIClient(host, auth, nil, nil)
+			cli, err := NewDatasetAPIClient(auth, host, auth, nil, nil)
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non nil HTTPClient required").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "non nil HTTPClient required").Error())
 			})
 		})
 	})
@@ -436,11 +451,11 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 		Convey("When NewDatasetAPIClient is called", func() {
 
-			cli, err := NewDatasetAPIClient(host, auth, httpClient, nil)
+			cli, err := NewDatasetAPIClient(auth, host, auth, httpClient, nil)
 
 			Convey("Then the expect values are returned", func() {
 				So(cli, ShouldBeNil)
-				So(err.Error(), ShouldEqual, errors.Wrap(validationErr, "non nil ResponseBodyReader required").Error())
+				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "non nil ResponseBodyReader required").Error())
 			})
 		})
 	})
@@ -449,7 +464,7 @@ func TestNewDatasetAPIClient(t *testing.T) {
 
 		Convey("When NewDatasetAPIClient is called", func() {
 
-			cli, err := NewDatasetAPIClient(host, auth, httpClient, responseBodyReader)
+			cli, err := NewDatasetAPIClient(auth, host, auth, httpClient, responseBodyReader)
 
 			Convey("Then the expect values are returned", func() {
 				So(err, ShouldBeNil)
