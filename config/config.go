@@ -20,6 +20,7 @@ type Config struct {
 	CacheExpiry             int           `envconfig:"CACHE_EXPIRY"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	ServiceAuthToken        string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
+	ZebedeeURL              string        `envconfig:"ZEBEDEE_URL"`
 }
 
 var config *Config
@@ -42,7 +43,10 @@ func Get() (*Config, error) {
 		CacheExpiry:             60,
 		GracefulShutdownTimeout: time.Second * 5,
 		ServiceAuthToken:        "1D6C47C1-8F42-4F64-9AB4-6E5A16F89607",
+		ZebedeeURL:              "http://localhost:8082",
 	}
+
+	config.ServiceAuthToken = "Bearer " + config.ServiceAuthToken
 
 	if err := processConfig("", config); err != nil {
 		return nil, errors.Wrap(err, "config: error while attempting to load environment config")
