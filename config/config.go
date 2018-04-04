@@ -46,11 +46,11 @@ func Get() (*Config, error) {
 		ZebedeeURL:              "http://localhost:8082",
 	}
 
-	config.ServiceAuthToken = "Bearer " + config.ServiceAuthToken
-
 	if err := processConfig("", config); err != nil {
 		return nil, errors.Wrap(err, "config: error while attempting to load environment config")
 	}
+
+	config.ServiceAuthToken = "Bearer " + config.ServiceAuthToken
 
 	return config, nil
 }

@@ -19,7 +19,7 @@ var (
 		CacheSize:               100 * 1024 * 1024,
 		CacheExpiry:             60,
 		GracefulShutdownTimeout: time.Second * 5,
-		ServiceAuthToken:        "Bearer 1D6C47C1-8F42-4F64-9AB4-6E5A16F89607",
+		ServiceAuthToken:        "1D6C47C1-8F42-4F64-9AB4-6E5A16F89607",
 		ZebedeeURL:              "http://localhost:8082",
 	}
 
@@ -113,6 +113,7 @@ func TestConfigNilSuccess(t *testing.T) {
 			actual, err := Get()
 
 			Convey("Then the expected config is returned and error is nil", func() {
+				expectedConfig.ServiceAuthToken = "Bearer " + expectedConfig.ServiceAuthToken
 				So(actual, ShouldResemble, expectedConfig)
 				So(err, ShouldBeNil)
 			})
