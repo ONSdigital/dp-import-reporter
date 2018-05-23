@@ -88,6 +88,7 @@ type Writer struct {
 	althandle syscall.Handle
 	oldattr   word
 	oldpos    coord
+	rest      bytes.Buffer
 }
 
 // NewColorable return new instance of Writer which handle escape sequence from File.
@@ -419,7 +420,17 @@ func (w *Writer) Write(data []byte) (n int, err error) {
 	procGetConsoleScreenBufferInfo.Call(uintptr(w.handle), uintptr(unsafe.Pointer(&csbi)))
 
 	handle := w.handle
-	er := bytes.NewReader(data)
+
+	var er *bytes.Reader
+	if w.rest.Len() > 0 {
+		var rest bytes.Buffer
+		w.rest.WriteTo(&rest)
+		w.rest.Reset()
+		rest.Write(data)
+		er = bytes.NewReader(rest.Bytes())
+	} else {
+		er = bytes.NewReader(data)
+	}
 	var bw [1]byte
 loop:
 	for {
@@ -437,28 +448,54 @@ loop:
 			break loop
 		}
 
-		if c2 == ']' {
-			if err := doTitleSequence(er); err != nil {
+		switch c2 {
+		case '>':
+			continue
+		case ']':
+			w.rest.WriteByte(c1)
+			w.rest.WriteByte(c2)
+			er.WriteTo(&w.rest)
+			if bytes.IndexByte(w.rest.Bytes(), 0x07) == -1 {
 				break loop
 			}
-			continue
-		}
-		if c2 != 0x5b {
-			continue
-		}
-
-		var buf bytes.Buffer
-		var m byte
-		for {
-			c, err := er.ReadByte()
+			er = bytes.NewReader(w.rest.Bytes()[2:])
+			err := doTitleSequence(er)
 			if err != nil {
 				break loop
 			}
+			w.rest.Reset()
+			continue
+		// https://github.com/mattn/go-colorable/issues/27
+		case '7':
+			procGetConsoleScreenBufferInfo.Call(uintptr(handle), uintptr(unsafe.Pointer(&csbi)))
+			w.oldpos = csbi.cursorPosition
+			continue
+		case '8':
+			procSetConsoleCursorPosition.Call(uintptr(handle), *(*uintptr)(unsafe.Pointer(&w.oldpos)))
+			continue
+		case 0x5b:
+			// execute part after switch
+		default:
+			continue
+		}
+
+		w.rest.WriteByte(c1)
+		w.rest.WriteByte(c2)
+		er.WriteTo(&w.rest)
+
+		var buf bytes.Buffer
+		var m byte
+		for i, c := range w.rest.Bytes()[2:] {
 			if ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '@' {
 				m = c
+				er = bytes.NewReader(w.rest.Bytes()[2+i+1:])
+				w.rest.Reset()
 				break
 			}
 			buf.Write([]byte(string(c)))
+		}
+		if m == 0 {
+			break loop
 		}
 
 		switch m {
@@ -493,6 +530,9 @@ loop:
 			}
 			procGetConsoleScreenBufferInfo.Call(uintptr(handle), uintptr(unsafe.Pointer(&csbi)))
 			csbi.cursorPosition.x -= short(n)
+			if csbi.cursorPosition.x < 0 {
+				csbi.cursorPosition.x = 0
+			}
 			procSetConsoleCursorPosition.Call(uintptr(handle), *(*uintptr)(unsafe.Pointer(&csbi.cursorPosition)))
 		case 'E':
 			n, err = strconv.Atoi(buf.String())
@@ -561,13 +601,13 @@ loop:
 			switch n {
 			case 0:
 				cursor = coord{x: csbi.cursorPosition.x, y: csbi.cursorPosition.y}
-				count = dword(csbi.size.x - csbi.cursorPosition.x + (csbi.size.y-csbi.cursorPosition.y)*csbi.size.x)
+				count = dword(csbi.size.x) - dword(csbi.cursorPosition.x) + dword(csbi.size.y-csbi.cursorPosition.y)*dword(csbi.size.x)
 			case 1:
 				cursor = coord{x: csbi.window.left, y: csbi.window.top}
-				count = dword(csbi.size.x - csbi.cursorPosition.x + (csbi.window.top-csbi.cursorPosition.y)*csbi.size.x)
+				count = dword(csbi.size.x) - dword(csbi.cursorPosition.x) + dword(csbi.window.top-csbi.cursorPosition.y)*dword(csbi.size.x)
 			case 2:
 				cursor = coord{x: csbi.window.left, y: csbi.window.top}
-				count = dword(csbi.size.x - csbi.cursorPosition.x + (csbi.size.y-csbi.cursorPosition.y)*csbi.size.x)
+				count = dword(csbi.size.x) - dword(csbi.cursorPosition.x) + dword(csbi.size.y-csbi.cursorPosition.y)*dword(csbi.size.x)
 			}
 			procFillConsoleOutputCharacter.Call(uintptr(handle), uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&written)))
 			procFillConsoleOutputAttribute.Call(uintptr(handle), uintptr(csbi.attributes), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&written)))
@@ -587,10 +627,10 @@ loop:
 				cursor = coord{x: csbi.cursorPosition.x, y: csbi.cursorPosition.y}
 				count = dword(csbi.size.x - csbi.cursorPosition.x)
 			case 1:
-				cursor = coord{x: csbi.window.left, y: csbi.window.top + csbi.cursorPosition.y}
+				cursor = coord{x: csbi.window.left, y: csbi.cursorPosition.y}
 				count = dword(csbi.size.x - csbi.cursorPosition.x)
 			case 2:
-				cursor = coord{x: csbi.window.left, y: csbi.window.top + csbi.cursorPosition.y}
+				cursor = coord{x: csbi.window.left, y: csbi.cursorPosition.y}
 				count = dword(csbi.size.x)
 			}
 			procFillConsoleOutputCharacter.Call(uintptr(handle), uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&written)))

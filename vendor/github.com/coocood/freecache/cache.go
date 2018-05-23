@@ -5,18 +5,20 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/spaolacci/murmur3"
+	"github.com/cespare/xxhash"
+)
+
+const (
+	minBufSize = 512 * 1024
 )
 
 type Cache struct {
-	locks     [256]sync.Mutex
-	segments  [256]segment
-	hitCount  int64
-	missCount int64
+	locks    [256]sync.Mutex
+	segments [256]segment
 }
 
 func hashFunc(data []byte) uint64 {
-	return murmur3.Sum64(data)
+	return xxhash.Sum64(data)
 }
 
 // The cache size will be set to 512KB at minimum.
@@ -24,8 +26,8 @@ func hashFunc(data []byte) uint64 {
 // `debug.SetGCPercent()`, set it to a much smaller value
 // to limit the memory consumption and GC pause time.
 func NewCache(size int) (cache *Cache) {
-	if size < 512*1024 {
-		size = 512 * 1024
+	if size < minBufSize {
+		size = minBufSize
 	}
 	cache = new(Cache)
 	for i := 0; i < 256; i++ {
@@ -51,13 +53,18 @@ func (cache *Cache) Get(key []byte) (value []byte, err error) {
 	hashVal := hashFunc(key)
 	segId := hashVal & 255
 	cache.locks[segId].Lock()
-	value, err = cache.segments[segId].get(key, hashVal)
+	value, _, err = cache.segments[segId].get(key, hashVal)
 	cache.locks[segId].Unlock()
-	if err == nil {
-		atomic.AddInt64(&cache.hitCount, 1)
-	} else {
-		atomic.AddInt64(&cache.missCount, 1)
-	}
+	return
+}
+
+// Get the value or not found error.
+func (cache *Cache) GetWithExpiration(key []byte) (value []byte, expireAt uint32, err error) {
+	hashVal := hashFunc(key)
+	segId := hashVal & 255
+	cache.locks[segId].Lock()
+	value, expireAt, err = cache.segments[segId].get(key, hashVal)
+	cache.locks[segId].Unlock()
 	return
 }
 
@@ -87,6 +94,12 @@ func (cache *Cache) GetInt(key int64) (value []byte, err error) {
 	var bKey [8]byte
 	binary.LittleEndian.PutUint64(bKey[:], uint64(key))
 	return cache.Get(bKey[:])
+}
+
+func (cache *Cache) GetIntWithExpiration(key int64) (value []byte, expireAt uint32, err error) {
+	var bKey [8]byte
+	binary.LittleEndian.PutUint64(bKey[:], uint64(key))
+	return cache.GetWithExpiration(bKey[:])
 }
 
 func (cache *Cache) DelInt(key int64) (affected bool) {
@@ -132,20 +145,31 @@ func (cache *Cache) AverageAccessTime() int64 {
 	}
 }
 
-func (cache *Cache) HitCount() int64 {
-	return atomic.LoadInt64(&cache.hitCount)
+func (cache *Cache) HitCount() (count int64) {
+	for i := range cache.segments {
+		count += atomic.LoadInt64(&cache.segments[i].hitCount)
+	}
+	return
+}
+
+func (cache *Cache) MissCount() (count int64) {
+	for i := range cache.segments {
+		count += atomic.LoadInt64(&cache.segments[i].missCount)
+	}
+	return
 }
 
 func (cache *Cache) LookupCount() int64 {
-	return atomic.LoadInt64(&cache.hitCount) + atomic.LoadInt64(&cache.missCount)
+	return cache.HitCount() + cache.MissCount()
 }
 
 func (cache *Cache) HitRate() float64 {
-	lookupCount := cache.LookupCount()
+	hitCount, missCount := cache.HitCount(), cache.MissCount()
+	lookupCount := hitCount + missCount
 	if lookupCount == 0 {
 		return 0
 	} else {
-		return float64(cache.HitCount()) / float64(lookupCount)
+		return float64(hitCount) / float64(lookupCount)
 	}
 }
 
@@ -159,17 +183,12 @@ func (cache *Cache) OverwriteCount() (overwriteCount int64) {
 func (cache *Cache) Clear() {
 	for i := 0; i < 256; i++ {
 		cache.locks[i].Lock()
-		newSeg := newSegment(len(cache.segments[i].rb.data), i)
-		cache.segments[i] = newSeg
+		cache.segments[i].clear()
 		cache.locks[i].Unlock()
 	}
-	atomic.StoreInt64(&cache.hitCount, 0)
-	atomic.StoreInt64(&cache.missCount, 0)
 }
 
 func (cache *Cache) ResetStatistics() {
-	atomic.StoreInt64(&cache.hitCount, 0)
-	atomic.StoreInt64(&cache.missCount, 0)
 	for i := 0; i < 256; i++ {
 		cache.locks[i].Lock()
 		cache.segments[i].resetStatistics()

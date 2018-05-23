@@ -249,14 +249,14 @@ func (d *dumpState) dumpSlice(v reflect.Value) {
 // appropriately.  It is a recursive function, however circular data structures
 // are detected and handled properly.
 func (d *dumpState) dump(v reflect.Value) {
-	// ProcessMessage invalid reflect values immediately.
+	// Handle invalid reflect values immediately.
 	kind := v.Kind()
 	if kind == reflect.Invalid {
 		d.w.Write(invalidAngleBytes)
 		return
 	}
 
-	// ProcessMessage pointers specially.
+	// Handle pointers specially.
 	if kind == reflect.Ptr {
 		d.indent()
 		d.dumpPtr(v)

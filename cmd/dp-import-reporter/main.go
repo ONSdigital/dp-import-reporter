@@ -68,7 +68,7 @@ func main() {
 	eventReceiver := &event.Receiver{Handler: reportEventHandler}
 
 	// create the report event kafka kafkaConsumer.
-	kafkaConsumer, err := kafka.NewConsumerGroup(cfg.Brokers, cfg.ReportEventTopic, cfg.ReportEventGroup, kafka.OffsetNewest)
+	kafkaConsumer, err := kafka.NewSyncConsumer(cfg.Brokers, cfg.ReportEventTopic, cfg.ReportEventGroup, kafka.OffsetNewest)
 	if err != nil {
 		log.ErrorC("error while attempting to create kafka kafkaConsumer", err, nil)
 		os.Exit(1)
@@ -79,25 +79,33 @@ func main() {
 
 	reportEventConsumer.Listen()
 
-	// block until a shutdown event happens
+	// block until a fatal event happens
 	select {
 	case sig := <-signals:
 		logger.Info("os signal received commencing graceful shutdown", log.Data{"signal": sig.String()})
-	case err := <-kafkaConsumer.Errors():
+	case err = <-kafkaConsumer.Errors():
 		logger.ErrorC("kafkaConsumer errors chan received an error commencing graceful shutdown", err, nil)
-	case err := <-errorChannel:
+	case err = <-errorChannel:
 		logger.ErrorC("errors channel received an error commencing graceful shutdown", err, nil)
 	}
 
 	logger.Info("attempting graceful shutdown of service", nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
-	defer cancel()
+	go func() {
+		defer cancel()
 
-	reportEventConsumer.Close(ctx)
-	kafkaConsumer.Close(ctx)
-	server.Shutdown(ctx)
+		reportEventConsumer.Close(ctx)
+		server.Shutdown(ctx)
+	}()
 
+	// wait for shutdown success (via cancel) or failure (timeout)
+	<-ctx.Done()
+	if err == nil && ctx.Err() != context.Canceled {
+		err = ctx.Err()
+	}
 	logger.Info("shutdown complete", nil)
-	os.Exit(1)
+	if err != nil {
+		os.Exit(1)
+	}
 }

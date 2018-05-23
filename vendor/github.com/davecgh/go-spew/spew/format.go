@@ -199,14 +199,14 @@ func (f *formatState) formatPtr(v reflect.Value) {
 // dealing with and formats it appropriately.  It is a recursive function,
 // however circular data structures are detected and handled properly.
 func (f *formatState) format(v reflect.Value) {
-	// ProcessMessage invalid reflect values immediately.
+	// Handle invalid reflect values immediately.
 	kind := v.Kind()
 	if kind == reflect.Invalid {
 		f.fs.Write(invalidAngleBytes)
 		return
 	}
 
-	// ProcessMessage pointers specially.
+	// Handle pointers specially.
 	if kind == reflect.Ptr {
 		f.formatPtr(v)
 		return
