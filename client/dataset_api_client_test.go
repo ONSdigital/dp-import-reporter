@@ -287,7 +287,7 @@ func TestDatasetAPIClientAddEventToInstanceUnexpectedStatus(t *testing.T) {
 
 func TestDatasetAPIClientAddEventToInstance(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
-		_, _, httpClient, cli := setup(nil, http.StatusCreated)
+		_, _, httpClient, cli := setup(nil, http.StatusOK)
 
 		Convey("When AddEventToInstance is called", func() {
 			err := cli.AddEventToInstance(testInstanceID, event)
