@@ -141,8 +141,8 @@ func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Even
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
-		return incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusCreated, resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusOK, resp.StatusCode)
 	}
 	logger.Info("AddEventToInstance completed successfully", logData)
 	return nil
