@@ -266,13 +266,13 @@ func TestDatasetAPIClientAddEventToInstanceUnexpectedStatus(t *testing.T) {
 	Convey("Given datasetAPIClient has been configured correctly", t, func() {
 		_, _, httpClient, cli := setup(nil, http.StatusBadRequest)
 
-		Convey("When the returned HTTP status is not 201 CREATED", func() {
+		Convey("When the returned HTTP status is not 200 OK", func() {
 
 			err := cli.AddEventToInstance(testInstanceID, event)
 
 			Convey("Then the expected error is returned", func() {
 				url := fmt.Sprintf(addInstanceEventURL, host, testInstanceID)
-				So(err.Error(), ShouldEqual, incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusCreated, http.StatusBadRequest).Error())
+				So(err.Error(), ShouldEqual, incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusOK, http.StatusBadRequest).Error())
 			})
 
 			Convey("And httpClient.Do is called 1 time", func() {
