@@ -15,11 +15,13 @@ type ConsumerGroup struct {
 	consumer     *cluster.Consumer
 	incoming     chan Message
 	errors       chan error
+	pauser       chan struct{}
 	closer       chan struct{}
 	closed       chan struct{}
 	topic        string
 	group        string
 	sync         bool
+	isPaused     bool
 	upstreamDone chan bool
 }
 
@@ -31,6 +33,11 @@ func (cg ConsumerGroup) Incoming() chan Message {
 // Errors provides a channel of incoming errors.
 func (cg ConsumerGroup) Errors() chan error {
 	return cg.errors
+}
+
+// PauseChan provides a channel for pausing the listener
+func (cg ConsumerGroup) PauseChan() chan struct{} {
+	return cg.pauser
 }
 
 // Release signals that upstream has completed an incoming message
@@ -86,6 +93,7 @@ func (cg *ConsumerGroup) Close(ctx context.Context) (err error) {
 	case <-cg.closed:
 		close(cg.errors)
 		close(cg.incoming)
+		close(cg.pauser)
 
 		if err = cg.consumer.Close(); err != nil {
 			log.ErrorC("Close failed of kafka consumer group", err, logData)
@@ -141,10 +149,12 @@ func newConsumer(brokers []string, topic string, group string, offset int64, syn
 		closer:       make(chan struct{}),
 		closed:       make(chan struct{}),
 		errors:       make(chan error),
+		pauser:       make(chan struct{}),
 		topic:        topic,
 		group:        group,
 		sync:         sync,
 		upstreamDone: make(chan bool, 1),
+		isPaused:     false,
 	}
 
 	// listener goroutine - listen to consumer.Messages() and upstream them
