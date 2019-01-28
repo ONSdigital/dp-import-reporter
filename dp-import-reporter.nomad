@@ -28,11 +28,7 @@ job "dp-import-reporter" {
     }
 
     task "dp-import-reporter" {
-      driver = "exec"
-
-      artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{BUILD_BUCKET}}/dp-import-reporter/{{REVISION}}.tar.gz"
-      }
+      driver = "docker"
 
       artifact {
         source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-import-reporter/{{REVISION}}.tar.gz"
@@ -41,9 +37,13 @@ job "dp-import-reporter" {
       config {
         command = "${NOMAD_TASK_DIR}/start-task"
 
-        args    = [
-          "${NOMAD_TASK_DIR}/dp-import-reporter"
-        ]
+        args = [“./dp-import-reporter”]
+
+        image = “{{ECR_URL}}:concourse-{{REVISION}}”
+
+        port_map {
+          http = “${NOMAD_PORT_http}”
+        }
       }
 
       service {
