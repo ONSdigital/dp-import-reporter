@@ -37,12 +37,12 @@ job "dp-import-reporter" {
       config {
         command = "${NOMAD_TASK_DIR}/start-task"
 
-        args = [“./dp-import-reporter”]
+        args = ["./dp-import-reporter"]
 
-        image = “{{ECR_URL}}:concourse-{{REVISION}}”
+        image = "{{ECR_URL}}:concourse-{{REVISION}}"
 
         port_map {
-          http = “${NOMAD_PORT_http}”
+          http = "${NOMAD_PORT_http}"
         }
       }
 
