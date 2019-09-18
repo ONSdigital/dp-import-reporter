@@ -4,12 +4,17 @@
 package mocks
 
 import (
+	"context"
 	"github.com/ONSdigital/go-ns/kafka"
 	"sync"
 )
 
 var (
-	lockKafkaConsumerMockIncoming sync.RWMutex
+	lockKafkaConsumerMockClose                   sync.RWMutex
+	lockKafkaConsumerMockCommitAndRelease        sync.RWMutex
+	lockKafkaConsumerMockErrors                  sync.RWMutex
+	lockKafkaConsumerMockIncoming                sync.RWMutex
+	lockKafkaConsumerMockStopListeningToConsumer sync.RWMutex
 )
 
 // KafkaConsumerMock is a mock implementation of KafkaConsumer.
@@ -18,8 +23,20 @@ var (
 //
 //         // make and configure a mocked KafkaConsumer
 //         mockedKafkaConsumer := &KafkaConsumerMock{
+//             CloseFunc: func(in1 context.Context) error {
+// 	               panic("TODO: mock out the Close method")
+//             },
+//             CommitAndReleaseFunc: func(in1 kafka.Message)  {
+// 	               panic("TODO: mock out the CommitAndRelease method")
+//             },
+//             ErrorsFunc: func() chan error {
+// 	               panic("TODO: mock out the Errors method")
+//             },
 //             IncomingFunc: func() chan kafka.Message {
 // 	               panic("TODO: mock out the Incoming method")
+//             },
+//             StopListeningToConsumerFunc: func(in1 context.Context) error {
+// 	               panic("TODO: mock out the StopListeningToConsumer method")
 //             },
 //         }
 //
@@ -28,15 +45,133 @@ var (
 //
 //     }
 type KafkaConsumerMock struct {
+	// CloseFunc mocks the Close method.
+	CloseFunc func(in1 context.Context) error
+
+	// CommitAndReleaseFunc mocks the CommitAndRelease method.
+	CommitAndReleaseFunc func(in1 kafka.Message)
+
+	// ErrorsFunc mocks the Errors method.
+	ErrorsFunc func() chan error
+
 	// IncomingFunc mocks the Incoming method.
 	IncomingFunc func() chan kafka.Message
 
+	// StopListeningToConsumerFunc mocks the StopListeningToConsumer method.
+	StopListeningToConsumerFunc func(in1 context.Context) error
+
 	// calls tracks calls to the methods.
 	calls struct {
+		// Close holds details about calls to the Close method.
+		Close []struct {
+			// In1 is the in1 argument value.
+			In1 context.Context
+		}
+		// CommitAndRelease holds details about calls to the CommitAndRelease method.
+		CommitAndRelease []struct {
+			// In1 is the in1 argument value.
+			In1 kafka.Message
+		}
+		// Errors holds details about calls to the Errors method.
+		Errors []struct {
+		}
 		// Incoming holds details about calls to the Incoming method.
 		Incoming []struct {
 		}
+		// StopListeningToConsumer holds details about calls to the StopListeningToConsumer method.
+		StopListeningToConsumer []struct {
+			// In1 is the in1 argument value.
+			In1 context.Context
+		}
 	}
+}
+
+// Close calls CloseFunc.
+func (mock *KafkaConsumerMock) Close(in1 context.Context) error {
+	if mock.CloseFunc == nil {
+		panic("moq: KafkaConsumerMock.CloseFunc is nil but KafkaConsumer.Close was just called")
+	}
+	callInfo := struct {
+		In1 context.Context
+	}{
+		In1: in1,
+	}
+	lockKafkaConsumerMockClose.Lock()
+	mock.calls.Close = append(mock.calls.Close, callInfo)
+	lockKafkaConsumerMockClose.Unlock()
+	return mock.CloseFunc(in1)
+}
+
+// CloseCalls gets all the calls that were made to Close.
+// Check the length with:
+//     len(mockedKafkaConsumer.CloseCalls())
+func (mock *KafkaConsumerMock) CloseCalls() []struct {
+	In1 context.Context
+} {
+	var calls []struct {
+		In1 context.Context
+	}
+	lockKafkaConsumerMockClose.RLock()
+	calls = mock.calls.Close
+	lockKafkaConsumerMockClose.RUnlock()
+	return calls
+}
+
+// CommitAndRelease calls CommitAndReleaseFunc.
+func (mock *KafkaConsumerMock) CommitAndRelease(in1 kafka.Message) {
+	if mock.CommitAndReleaseFunc == nil {
+		panic("moq: KafkaConsumerMock.CommitAndReleaseFunc is nil but KafkaConsumer.CommitAndRelease was just called")
+	}
+	callInfo := struct {
+		In1 kafka.Message
+	}{
+		In1: in1,
+	}
+	lockKafkaConsumerMockCommitAndRelease.Lock()
+	mock.calls.CommitAndRelease = append(mock.calls.CommitAndRelease, callInfo)
+	lockKafkaConsumerMockCommitAndRelease.Unlock()
+	mock.CommitAndReleaseFunc(in1)
+}
+
+// CommitAndReleaseCalls gets all the calls that were made to CommitAndRelease.
+// Check the length with:
+//     len(mockedKafkaConsumer.CommitAndReleaseCalls())
+func (mock *KafkaConsumerMock) CommitAndReleaseCalls() []struct {
+	In1 kafka.Message
+} {
+	var calls []struct {
+		In1 kafka.Message
+	}
+	lockKafkaConsumerMockCommitAndRelease.RLock()
+	calls = mock.calls.CommitAndRelease
+	lockKafkaConsumerMockCommitAndRelease.RUnlock()
+	return calls
+}
+
+// Errors calls ErrorsFunc.
+func (mock *KafkaConsumerMock) Errors() chan error {
+	if mock.ErrorsFunc == nil {
+		panic("moq: KafkaConsumerMock.ErrorsFunc is nil but KafkaConsumer.Errors was just called")
+	}
+	callInfo := struct {
+	}{}
+	lockKafkaConsumerMockErrors.Lock()
+	mock.calls.Errors = append(mock.calls.Errors, callInfo)
+	lockKafkaConsumerMockErrors.Unlock()
+	return mock.ErrorsFunc()
+}
+
+// ErrorsCalls gets all the calls that were made to Errors.
+// Check the length with:
+//     len(mockedKafkaConsumer.ErrorsCalls())
+func (mock *KafkaConsumerMock) ErrorsCalls() []struct {
+} {
+	var calls []struct {
+	}
+	lockKafkaConsumerMockErrors.RLock()
+	calls = mock.calls.Errors
+	lockKafkaConsumerMockErrors.RUnlock()
+	return calls
 }
 
 // Incoming calls IncomingFunc.
@@ -65,9 +200,41 @@ func (mock *KafkaConsumerMock) IncomingCalls() []struct {
 	return calls
 }
 
+// StopListeningToConsumer calls StopListeningToConsumerFunc.
+func (mock *KafkaConsumerMock) StopListeningToConsumer(in1 context.Context) error {
+	if mock.StopListeningToConsumerFunc == nil {
+		panic("moq: KafkaConsumerMock.StopListeningToConsumerFunc is nil but KafkaConsumer.StopListeningToConsumer was just called")
+	}
+	callInfo := struct {
+		In1 context.Context
+	}{
+		In1: in1,
+	}
+	lockKafkaConsumerMockStopListeningToConsumer.Lock()
+	mock.calls.StopListeningToConsumer = append(mock.calls.StopListeningToConsumer, callInfo)
+	lockKafkaConsumerMockStopListeningToConsumer.Unlock()
+	return mock.StopListeningToConsumerFunc(in1)
+}
+
+// StopListeningToConsumerCalls gets all the calls that were made to StopListeningToConsumer.
+// Check the length with:
+//     len(mockedKafkaConsumer.StopListeningToConsumerCalls())
+func (mock *KafkaConsumerMock) StopListeningToConsumerCalls() []struct {
+	In1 context.Context
+} {
+	var calls []struct {
+		In1 context.Context
+	}
+	lockKafkaConsumerMockStopListeningToConsumer.RLock()
+	calls = mock.calls.StopListeningToConsumer
+	lockKafkaConsumerMockStopListeningToConsumer.RUnlock()
+	return calls
+}
+
 var (
 	lockKafkaMessageMockCommit  sync.RWMutex
 	lockKafkaMessageMockGetData sync.RWMutex
+	lockKafkaMessageMockOffset  sync.RWMutex
 )
 
 // KafkaMessageMock is a mock implementation of KafkaMessage.
@@ -82,6 +249,9 @@ var (
 //             GetDataFunc: func() []byte {
 // 	               panic("TODO: mock out the GetData method")
 //             },
+//             OffsetFunc: func() int64 {
+// 	               panic("TODO: mock out the Offset method")
+//             },
 //         }
 //
 //         // TODO: use mockedKafkaMessage in code that requires KafkaMessage
@@ -95,6 +265,9 @@ type KafkaMessageMock struct {
 	// GetDataFunc mocks the GetData method.
 	GetDataFunc func() []byte
 
+	// OffsetFunc mocks the Offset method.
+	OffsetFunc func() int64
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Commit holds details about calls to the Commit method.
@@ -102,6 +275,9 @@ type KafkaMessageMock struct {
 		}
 		// GetData holds details about calls to the GetData method.
 		GetData []struct {
+		}
+		// Offset holds details about calls to the Offset method.
+		Offset []struct {
 		}
 	}
 }
@@ -155,6 +331,32 @@ func (mock *KafkaMessageMock) GetDataCalls() []struct {
 	lockKafkaMessageMockGetData.RLock()
 	calls = mock.calls.GetData
 	lockKafkaMessageMockGetData.RUnlock()
+	return calls
+}
+
+// Offset calls OffsetFunc.
+func (mock *KafkaMessageMock) Offset() int64 {
+	if mock.OffsetFunc == nil {
+		panic("moq: KafkaMessageMock.OffsetFunc is nil but KafkaMessage.Offset was just called")
+	}
+	callInfo := struct {
+	}{}
+	lockKafkaMessageMockOffset.Lock()
+	mock.calls.Offset = append(mock.calls.Offset, callInfo)
+	lockKafkaMessageMockOffset.Unlock()
+	return mock.OffsetFunc()
+}
+
+// OffsetCalls gets all the calls that were made to Offset.
+// Check the length with:
+//     len(mockedKafkaMessage.OffsetCalls())
+func (mock *KafkaMessageMock) OffsetCalls() []struct {
+} {
+	var calls []struct {
+	}
+	lockKafkaMessageMockOffset.RLock()
+	calls = mock.calls.Offset
+	lockKafkaMessageMockOffset.RUnlock()
 	return calls
 }
 

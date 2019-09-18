@@ -461,7 +461,7 @@ func checkForNil(c reflect.Value) (err error) {
 		return
 	}
 
-	// Ask whether the value is nil. ProcessMessage a nil literal (kind Invalid)
+	// Ask whether the value is nil. Handle a nil literal (kind Invalid)
 	// specially, since it's not legal to call IsNil there.
 	if c.Kind() == reflect.Invalid || c.IsNil() {
 		err = nil
