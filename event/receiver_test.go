@@ -1,12 +1,15 @@
 package event
 
 import (
+	"context"
+	"testing"
+
 	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
+	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 )
 
 var errMock = errors.New("broken")
@@ -21,15 +24,11 @@ func TestReceiverProcessMessage(t *testing.T) {
 			InstanceID:  "666",
 		}
 
-		kafkaMsg := &mocks.KafkaMessageMock{
-			GetDataFunc: func() []byte {
-				avro, _ := schema.ReportEventSchema.Marshal(e)
-				return avro
-			},
-		}
+		avro, _ := schema.ReportEventSchema.Marshal(e)
+		kafkaMsg := kafkatest.NewMessage(avro, 0)
 
 		handler := &mocks.EventHandlerMock{
-			HandleEventFunc: func(e *model.ReportEvent) error {
+			HandleEventFunc: func(ctx context.Context, e *model.ReportEvent) error {
 				return nil
 			},
 		}
@@ -39,7 +38,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 		}
 
 		Convey("When ProcessMessage is invoked with a valid message", func() {
-			err := receiver.ProcessMessage(kafkaMsg)
+			err := receiver.ProcessMessage(ctx, kafkaMsg)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -53,13 +52,10 @@ func TestReceiverProcessMessage(t *testing.T) {
 		})
 
 		Convey("When an invalid message is received", func() {
-			kafkaMsg := &mocks.KafkaMessageMock{
-				GetDataFunc: func() []byte {
-					return []byte("This is not a valid message")
-				},
-			}
 
-			err := receiver.ProcessMessage(kafkaMsg)
+			kafkaMsg := kafkatest.NewMessage([]byte("This is not a valid message"), 0)
+
+			err := receiver.ProcessMessage(ctx, kafkaMsg)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldNotBeNil)
@@ -72,7 +68,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 
 		Convey("When Handler.HandleEvent returns an error", func() {
 			handler := &mocks.EventHandlerMock{
-				HandleEventFunc: func(e *model.ReportEvent) error {
+				HandleEventFunc: func(ctx context.Context, e *model.ReportEvent) error {
 					return errMock
 				},
 			}
@@ -81,7 +77,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 				Handler: handler,
 			}
 
-			err := receiver.ProcessMessage(kafkaMsg)
+			err := receiver.ProcessMessage(ctx, kafkaMsg)
 
 			Convey("Then the expected error is returned", func() {
 				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "Handler.HandleEvent returned an error").Error())

@@ -1,11 +1,13 @@
 package event
 
 import (
+	"context"
 	"errors"
+	"testing"
+
 	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 )
 
 var (
@@ -25,6 +27,8 @@ var (
 	}
 )
 
+var ctx = context.Background()
+
 func TestHandleEventNotInCacheOrDatasetAPI(t *testing.T) {
 	Convey("Given the handle has been configured correctly", t, func() {
 		datasetAPI, cacheMock := setup()
@@ -36,7 +40,7 @@ func TestHandleEventNotInCacheOrDatasetAPI(t *testing.T) {
 		}
 
 		Convey("When handle is invoked with an event that's not in cacheMock or in the dataset instance.events", func() {
-			err := reportEventHandler.HandleEvent(e)
+			err := reportEventHandler.HandleEvent(ctx, e)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -89,7 +93,7 @@ func TestReportEventHandlerHandleEventEventInCache(t *testing.T) {
 		var handlerErrors error
 
 		Convey("When the cache contains the event being handled", func() {
-			handlerErrors = reportEventHandler.HandleEvent(e)
+			handlerErrors = reportEventHandler.HandleEvent(ctx, e)
 		})
 
 		Convey("Then no error is returned", func() {
@@ -121,13 +125,13 @@ func TestReportEventHandlerHandleEventEventInCache(t *testing.T) {
 
 func setup() (*mocks.DatasetAPICliMock, *mocks.CacheMock) {
 	return &mocks.DatasetAPICliMock{
-			AddEventToInstanceFunc: func(instanceID string, e *model.Event) error {
+			AddEventToInstanceFunc: func(ctx context.Context, instanceID string, e *model.Event) error {
 				return nil
 			},
-			GetInstanceFunc: func(instanceID string) (*model.Instance, error) {
+			GetInstanceFunc: func(ctx context.Context, instanceID string) (*model.Instance, error) {
 				return instance, nil
 			},
-			UpdateInstanceStatusFunc: func(instanceID string, state *model.State) error {
+			UpdateInstanceStatusFunc: func(ctx context.Context, instanceID string, state *model.State) error {
 				return nil
 			},
 		}, &mocks.CacheMock{

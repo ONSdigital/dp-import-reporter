@@ -1,11 +1,12 @@
 package event
 
 import (
-	"github.com/ONSdigital/dp-import-reporter/logging"
-	"github.com/ONSdigital/dp-import-reporter/model"
-	"github.com/ONSdigital/go-ns/log"
-	"github.com/pkg/errors"
+	"context"
 	"time"
+
+	"github.com/ONSdigital/dp-import-reporter/model"
+	"github.com/ONSdigital/log.go/log"
+	"github.com/pkg/errors"
 )
 
 //go:generate moq -out ../mocks/event_generated_mocks.go -pkg mocks . DatasetAPICli Cache EventHandler
@@ -18,14 +19,13 @@ const (
 
 var (
 	statusFailed = &model.State{State: failed}
-	handlerLog   = logging.Logger{Prefix: "event.Handler"}
 )
 
 // DatasetAPICli defines that interface for a client of the DatasetAPI
 type DatasetAPICli interface {
-	GetInstance(instanceID string) (*model.Instance, error)
-	AddEventToInstance(instanceID string, e *model.Event) error
-	UpdateInstanceStatus(instanceID string, state *model.State) error
+	GetInstance(ctx context.Context, instanceID string) (*model.Instance, error)
+	AddEventToInstance(ctx context.Context, instanceID string, e *model.Event) error
+	UpdateInstanceStatus(ctx context.Context, instanceID string, state *model.State) error
 }
 
 // Cache defines the behaviour of an in memory cache
@@ -45,9 +45,9 @@ type Handler struct {
 
 // HandleEvent if the event does not exist in the local cache add it to the dataset instance events (if it does not
 // already exist) & add to the local cache, otherwise update the cache time to live.
-func (h Handler) HandleEvent(e *model.ReportEvent) error {
+func (h Handler) HandleEvent(ctx context.Context, e *model.ReportEvent) error {
 	logDetails := log.Data{reportEventKey: *e}
-	handlerLog.Info("handling report event", logDetails)
+	log.Event(ctx, "handling report event", log.INFO, logDetails)
 
 	key, value, err := e.GenCacheKeyAndValue()
 	if err != nil {
@@ -55,8 +55,8 @@ func (h Handler) HandleEvent(e *model.ReportEvent) error {
 	}
 
 	if _, err := h.Cache.Get(key); err != nil {
-		log.Info("report event not found in dp-import-reporter cache, retrieving instance from dataset API", logDetails)
-		i, err := h.DatasetAPI.GetInstance(e.InstanceID)
+		log.Event(ctx, "report event not found in dp-import-reporter cache, retrieving instance from dataset API", log.INFO, logDetails)
+		i, err := h.DatasetAPI.GetInstance(ctx, e.InstanceID)
 		if err != nil {
 			return errors.Wrap(err, "datasetAPI.GetInstance return an error")
 		}
@@ -71,25 +71,25 @@ func (h Handler) HandleEvent(e *model.ReportEvent) error {
 		}
 
 		if !i.ContainsEvent(newEvent) {
-			handlerLog.Info("report event not in instance.events, adding event to instance and persisting changes to dataset api", logDetails)
+			log.Event(ctx, "report event not in instance.events, adding event to instance and persisting changes to dataset api", log.INFO, logDetails)
 
-			if err := h.DatasetAPI.AddEventToInstance(i.InstanceID, newEvent); err != nil {
+			if err := h.DatasetAPI.AddEventToInstance(ctx, i.InstanceID, newEvent); err != nil {
 				return errors.Wrap(err, "datasetAPI.AddEventToInstance returned an error")
 			}
 			if e.EventType == errorType && i.State != failed {
-				handlerLog.Info("updating instance.status to failed and persisting changes to dataset api", logDetails)
+				log.Event(ctx, "updating instance.status to failed and persisting changes to dataset api", log.INFO, logDetails)
 
-				if err := h.DatasetAPI.UpdateInstanceStatus(i.InstanceID, statusFailed); err != nil {
+				if err := h.DatasetAPI.UpdateInstanceStatus(ctx, i.InstanceID, statusFailed); err != nil {
 					return errors.Wrap(err, "datasetAPI.UpdateInstanceStatus return an error")
 				}
 			}
 		}
 
-		handlerLog.Info("adding report event to dp-import-reporter cache", logDetails)
+		log.Event(ctx, "adding report event to dp-import-reporter cache", log.INFO, logDetails)
 		h.Cache.Set(key, value, h.ExpireSeconds)
 		return nil
 	}
-	handlerLog.Info("report event found in dp-import-reporter cache, updating cache expiry time", logDetails)
+	log.Event(ctx, "report event found in dp-import-reporter cache, updating cache expiry time", log.INFO, logDetails)
 	// If the key exists in the cache delete it and set it again to reset the time to live
 	h.Cache.Del(key)
 	h.Cache.Set(key, value, h.ExpireSeconds)

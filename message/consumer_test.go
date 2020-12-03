@@ -9,8 +9,9 @@ import (
 	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
-	"github.com/ONSdigital/go-ns/kafka"
-	"github.com/ONSdigital/go-ns/log"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
+	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
+	"github.com/ONSdigital/log.go/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -23,25 +24,26 @@ var (
 	}
 )
 
+var ctx = context.Background()
+
 func TestMessageConsumerListen(t *testing.T) {
 	Convey("Given the consumer is configured correctly", t, func() {
 
 		Convey("When an incoming message is received", func() {
-			onCommit := make(chan bool, 1)
 			avro, _ := schema.ReportEventSchema.Marshal(reportEvent)
-			kafkaMsg, incoming, kafkaConsumer, receiver, _ := setUp(onCommit, avro, nil)
+			kafkaMsg, kafkaConsumer, receiver := setUp(avro, nil)
 
 			consumer := NewConsumer(kafkaConsumer, receiver, time.Second*10)
-			consumer.Listen()
+			consumer.Listen(ctx)
 			defer consumer.Close(nil)
 
-			incoming <- kafkaMsg
+			kafkaConsumer.Channels().Upstream <- kafkaMsg
 
 			select {
-			case <-onCommit:
-				log.Info("message committed as expected", nil)
+			case <-kafkaMsg.UpstreamDone():
+				log.Event(ctx, "message committed as expected", log.INFO)
 			case <-time.After(time.Second * 5):
-				log.Info("failing test: expected behaviour failed to happen before timeout", nil)
+				log.Event(ctx, "failing test: expected behaviour failed to happen before timeout", log.INFO)
 				t.FailNow()
 			}
 
@@ -52,20 +54,19 @@ func TestMessageConsumerListen(t *testing.T) {
 			})
 
 			Convey("And consumer.CommitAndRelease is called once", func() {
-				So(len(kafkaConsumer.CommitAndReleaseCalls()), ShouldEqual, 1)
+				So(len(kafkaMsg.CommitAndReleaseCalls()), ShouldEqual, 1)
 			})
 		})
 
 		Convey("When the eventReceiver.ProcessMessage returns an error", func() {
-			onCommit := make(chan bool, 1)
 			avro, _ := schema.ReportEventSchema.Marshal(reportEvent)
 			handlerErr := errors.New("Flubba Wubba Dub Dub")
-			kafkaMsg, incoming, kafkaConsumer, _, _ := setUp(onCommit, avro, nil)
+			kafkaMsg, kafkaConsumer, _ := setUp(avro, nil)
 
 			onHandle := make(chan bool)
 
 			receiverMock := &mocks.ReceiverMock{
-				ProcessMessageFunc: func(event kafka.Message) error {
+				ProcessMessageFunc: func(ctx context.Context, event kafka.Message) error {
 					go func() {
 						<-time.After(time.Second * 2)
 						onHandle <- true
@@ -75,15 +76,15 @@ func TestMessageConsumerListen(t *testing.T) {
 			}
 
 			consumer := NewConsumer(kafkaConsumer, receiverMock, time.Second*10)
-			consumer.Listen()
+			consumer.Listen(ctx)
 
-			incoming <- kafkaMsg
+			kafkaConsumer.Channels().Upstream <- kafkaMsg
 
 			select {
 			case <-onHandle: // wait for onHandle to receive before performing test assertions.
-				log.Debug("message handled as expected", nil)
+				log.Event(ctx, "message handled as expected", log.INFO)
 			case <-time.After(time.Second * 5):
-				log.Info("failing test: expected behaviour did not happen before timeout", nil)
+				log.Event(ctx, "failing test: expected behaviour did not happen before timeout", log.INFO)
 				t.FailNow()
 			}
 
@@ -96,45 +97,23 @@ func TestMessageConsumerListen(t *testing.T) {
 			})
 
 			Convey("And eventMsg.Commit is never called", func() {
-				So(len(kafkaConsumer.CommitAndReleaseCalls()), ShouldEqual, 0)
+				So(len(kafkaMsg.CommitAndReleaseCalls()), ShouldEqual, 0)
 			})
 		})
 
 	})
 }
 
-func setUp(onCommit chan bool, avroBytes []byte, handlerErr error) (*mocks.KafkaMessageMock, chan kafka.Message, *mocks.KafkaConsumerMock, *mocks.ReceiverMock, chan error) {
-	kafkaMsg := &mocks.KafkaMessageMock{
-		GetDataFunc: func() []byte {
-			return avroBytes
-		},
-	}
+func setUp(avroBytes []byte, handlerErr error) (*kafkatest.Message, *kafkatest.MessageConsumer, *mocks.ReceiverMock) {
 
-	incomingChan := make(chan kafka.Message, 1)
-	errorsChan := make(chan error, 1)
+	kafkaMsg := kafkatest.NewMessage(avroBytes, 0)
 
-	consumerMock := &mocks.KafkaConsumerMock{
-		IncomingFunc: func() chan kafka.Message {
-			return incomingChan
-		},
-		CommitAndReleaseFunc: func(event kafka.Message) {
-			onCommit <- true
-		},
-		ErrorsFunc: func() chan error {
-			return errorsChan
-		},
-		StopListeningToConsumerFunc: func(ctx context.Context) error {
-			return nil
-		},
-		CloseFunc: func(ctx context.Context) error {
-			return nil
-		},
-	}
+	consumerMock := kafkatest.NewMessageConsumer(true)
 
 	eventHandler := &mocks.ReceiverMock{
-		ProcessMessageFunc: func(event kafka.Message) error {
+		ProcessMessageFunc: func(ctx context.Context, event kafka.Message) error {
 			return handlerErr
 		},
 	}
-	return kafkaMsg, incomingChan, consumerMock, eventHandler, errorsChan
+	return kafkaMsg, consumerMock, eventHandler
 }

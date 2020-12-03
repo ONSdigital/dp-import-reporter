@@ -2,15 +2,15 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"reflect"
 
-	"github.com/ONSdigital/dp-import-reporter/logging"
 	"github.com/ONSdigital/dp-import-reporter/model"
-	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/pkg/errors"
 )
 
@@ -32,7 +32,6 @@ const (
 
 var (
 	errValidation = errors.New("dataset api client validation error")
-	logger        = logging.Logger{Prefix: "client.DatasetAPI"}
 )
 
 // HTTPClient defines a client for making http requests.
@@ -84,7 +83,7 @@ func NewDatasetAPIClient(authToken string, host string, datasetAPIAuthToken stri
 }
 
 // GetInstance make a HTTP GET request to the Dataset API to get the specified Instance
-func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, error) {
+func (cli *DatasetAPIClient) GetInstance(ctx context.Context, instanceID string) (*model.Instance, error) {
 	if len(instanceID) == 0 {
 		return nil, errors.Wrap(errValidation, "GetInstance requires a non empty instanceID")
 	}
@@ -95,7 +94,7 @@ func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, er
 		uriKey:        url,
 	}
 
-	resp, err := cli.doRequest(url, http.MethodGet, nil, logData)
+	resp, err := cli.doRequest(ctx, url, http.MethodGet, nil, logData)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetInstance HTTPClient.doRequest returned an error")
 	}
@@ -115,12 +114,12 @@ func (cli *DatasetAPIClient) GetInstance(instanceID string) (*model.Instance, er
 	if err = json.Unmarshal(body, &instance); err != nil {
 		return nil, errors.Wrap(err, "GetInstance error while attempting to unmarshal HTTP response body into model.Instance")
 	}
-	logger.Info("GetInstance completed successfully", log.Data{instanceKey: instance})
+	log.Event(ctx, "GetInstance completed successfully", log.INFO, log.Data{instanceKey: instance})
 	return &instance, err
 }
 
 // AddEventToInstance make a post request to the dataset API to add a report event to get the specified Instance
-func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Event) error {
+func (cli *DatasetAPIClient) AddEventToInstance(ctx context.Context, instanceID string, e *model.Event) error {
 	if len(instanceID) == 0 {
 		return errors.Wrap(errValidation, "AddEventToInstance requires a non empty instanceID")
 	}
@@ -135,7 +134,7 @@ func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Even
 		uriKey:        url,
 	}
 
-	resp, err := cli.doRequest(url, http.MethodPost, e, logData)
+	resp, err := cli.doRequest(ctx, url, http.MethodPost, e, logData)
 	if err != nil {
 		return errors.Wrap(err, "AddEventToInstance HTTPClient.doRequest returned an error")
 	}
@@ -144,12 +143,12 @@ func (cli *DatasetAPIClient) AddEventToInstance(instanceID string, e *model.Even
 	if resp.StatusCode != http.StatusCreated {
 		return incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusCreated, resp.StatusCode)
 	}
-	logger.Info("AddEventToInstance completed successfully", logData)
+	log.Event(ctx, "AddEventToInstance completed successfully", log.INFO, logData)
 	return nil
 }
 
 // UpdateInstanceStatus send a PUT request to the dataset API to update the status of the specified instance
-func (cli *DatasetAPIClient) UpdateInstanceStatus(instanceID string, state *model.State) error {
+func (cli *DatasetAPIClient) UpdateInstanceStatus(ctx context.Context, instanceID string, state *model.State) error {
 	if len(instanceID) == 0 {
 		return errors.Wrap(errValidation, "UpdateInstanceStatus requires a non empty instanceID")
 	}
@@ -164,7 +163,7 @@ func (cli *DatasetAPIClient) UpdateInstanceStatus(instanceID string, state *mode
 		uriKey:        url,
 		stateKey:      state,
 	}
-	resp, err := cli.doRequest(url, http.MethodPut, state, logData)
+	resp, err := cli.doRequest(ctx, url, http.MethodPut, state, logData)
 	if err != nil {
 		return errors.Wrap(err, "UpdateInstanceStatus HTTPClient.doRequest returned an error")
 	}
@@ -173,12 +172,12 @@ func (cli *DatasetAPIClient) UpdateInstanceStatus(instanceID string, state *mode
 	if resp.StatusCode != http.StatusOK {
 		return incorrectStatusError("UpdateInstanceStatus", url, http.MethodPut, http.StatusOK, resp.StatusCode)
 	}
-	logger.Info("UpdateInstanceStatus completed successfully", logData)
+	log.Event(ctx, "UpdateInstanceStatus completed successfully", log.INFO, logData)
 	return nil
 }
 
 // doRequest builds a Dataset API request from the specified url, method & payload & sets the required authentication header
-func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload interface{}, logData log.Data) (*http.Response, error) {
+func (cli *DatasetAPIClient) doRequest(ctx context.Context, url string, httpMethod string, payload interface{}, logData log.Data) (*http.Response, error) {
 	var body []byte
 	var err error
 	var req *http.Request
@@ -192,7 +191,7 @@ func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload in
 		logData[requestBodyKey] = string(body)
 
 		if err != nil {
-			log.Error(err, logData)
+			log.Event(ctx, "error marshalling", log.Error(err), log.ERROR, logData)
 			return nil, errors.Wrap(err, fmt.Sprintf("error when attempting to marshal %s to json", reflect.TypeOf(payload).Name()))
 		}
 
@@ -210,12 +209,12 @@ func (cli *DatasetAPIClient) doRequest(url string, httpMethod string, payload in
 	req.Header.Set(authTokenHeader, cli.datasetAPIAuthToken)
 	req.Header.Set(authorizationHeader, cli.authToken)
 
-	logger.Info("making HTTP request", logData)
+	log.Event(ctx, "making HTTP request", log.INFO, logData)
 	resp, err := cli.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("HTTP response received", nil)
+	log.Event(ctx, "HTTP response received", log.INFO)
 	return resp, nil
 }
 

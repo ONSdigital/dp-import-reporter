@@ -4,28 +4,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/ONSdigital/dp-import-reporter/logging"
-	"github.com/ONSdigital/go-ns/kafka"
-	"github.com/ONSdigital/go-ns/log"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
+	"github.com/ONSdigital/log.go/log"
 )
 
-//go:generate moq -out ../mocks/message_generated_mocks.go -pkg mocks . KafkaConsumer KafkaMessage Receiver
-
-var logger = logging.Logger{"message.Consumer"}
+//go:generate moq -out ../mocks/message_generated_mocks.go -pkg mocks . Receiver
 
 // Receiver defines a struct that processes a kafka message
 type Receiver interface {
-	ProcessMessage(event kafka.Message) error
-}
-
-type KafkaMessage kafka.Message
-
-type KafkaConsumer interface {
-	Incoming() chan kafka.Message
-	CommitAndRelease(kafka.Message)
-	StopListeningToConsumer(context.Context) error
-	Close(context.Context) error
-	Errors() chan error
+	ProcessMessage(ctx context.Context, event kafka.Message) error
 }
 
 // Consumer consumes incoming reportEvent Messages from the event-reporter kafka topic
@@ -33,13 +20,13 @@ type Consumer struct {
 	closed        chan bool
 	ctx           context.Context
 	cancel        context.CancelFunc
-	consumer      KafkaConsumer
+	consumer      kafka.IConsumerGroup
 	eventReceiver Receiver
 	timeout       time.Duration
 }
 
 // NewConsumer Create a new Consumer
-func NewConsumer(consumer KafkaConsumer, eventReceiver Receiver, timeout time.Duration) Consumer {
+func NewConsumer(consumer kafka.IConsumerGroup, eventReceiver Receiver, timeout time.Duration) Consumer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return Consumer{
@@ -53,20 +40,21 @@ func NewConsumer(consumer KafkaConsumer, eventReceiver Receiver, timeout time.Du
 }
 
 // Listen polls the kafka topic for incoming messages and dispatches them for processing
-func (c *Consumer) Listen() {
+func (c *Consumer) Listen(ctx context.Context) {
 	go func() {
 		for keepListening := true; keepListening; {
 			select {
-			case eventMsg := <-c.consumer.Incoming():
-				logger.Info("incoming received a message", log.Data{"msg": eventMsg})
+			case eventMsg := <-c.consumer.Channels().Upstream:
+				// log.Event(ctx, "incoming received a message", log.INFO, log.Data{"msg": eventMsg})
+				log.Event(ctx, "incoming received a message", log.INFO)
 
-				if err := c.eventReceiver.ProcessMessage(eventMsg); err != nil {
-					log.ErrorC("error returned from eventReceiver.ProcessMessage event message will not be committed to consumer group", err, nil)
+				if err := c.eventReceiver.ProcessMessage(ctx, eventMsg); err != nil {
+					log.Event(ctx, "error returned from eventReceiver.ProcessMessage event message will not be committed to consumer group", log.ERROR, log.Error(err))
 					continue
 				}
-				c.consumer.CommitAndRelease(eventMsg)
+				eventMsg.CommitAndRelease()
 			case <-c.ctx.Done():
-				logger.Info("context done, consumer.Listen loop closing", nil)
+				log.Event(ctx, "context done, consumer.Listen loop closing", log.INFO)
 				keepListening = false
 			}
 		}
@@ -99,8 +87,8 @@ func (c Consumer) Close(ctx context.Context) {
 	// wait for the consumer to signal that it has exited or the context timeout occurs
 	select {
 	case <-c.closed:
-		logger.Info("gracefully shutdown consumer loop", nil)
+		log.Event(ctx, "gracefully shutdown consumer loop", log.INFO)
 	case <-ctx.Done():
-		logger.Info("forced shutdown of consumer loop", nil)
+		log.Event(ctx, "forced shutdown of consumer loop", log.INFO)
 	}
 }
