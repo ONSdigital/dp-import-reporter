@@ -44,13 +44,15 @@ func (c *Consumer) Listen(ctx context.Context) {
 	go func() {
 		for keepListening := true; keepListening; {
 			select {
-			case eventMsg := <-c.consumer.Channels().Upstream:
+			case eventMsg, ok := <-c.consumer.Channels().Upstream:
+				if !ok {
+					break
+				}
 				// log.Event(ctx, "incoming received a message", log.INFO, log.Data{"msg": eventMsg})
 				log.Event(ctx, "incoming received a message", log.INFO)
 
 				if err := c.eventReceiver.ProcessMessage(ctx, eventMsg); err != nil {
-					log.Event(ctx, "error returned from eventReceiver.ProcessMessage event message will not be committed to consumer group", log.ERROR, log.Error(err))
-					continue
+					log.Event(ctx, "error returned from eventReceiver.ProcessMessage ", log.ERROR, log.Error(err))
 				}
 				eventMsg.CommitAndRelease()
 			case <-c.ctx.Done():

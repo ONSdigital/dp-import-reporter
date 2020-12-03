@@ -35,7 +35,6 @@ func TestMessageConsumerListen(t *testing.T) {
 
 			consumer := NewConsumer(kafkaConsumer, receiver, time.Second*10)
 			consumer.Listen(ctx)
-			defer consumer.Close(nil)
 
 			kafkaConsumer.Channels().Upstream <- kafkaMsg
 
@@ -47,10 +46,13 @@ func TestMessageConsumerListen(t *testing.T) {
 				t.FailNow()
 			}
 
+			consumer.Close(nil)
+			<-consumer.closed
+
 			Convey("Then eventReceiver.ProcessMessage is called once with the expected parameters", func() {
-				params := receiver.ProcessMessageCalls()
-				So(len(params), ShouldEqual, 1)
-				So(params[0].Event, ShouldResemble, kafkaMsg)
+				calls := receiver.ProcessMessageCalls()
+				So(calls, ShouldHaveLength, 1)
+				So(calls[0].Event, ShouldResemble, kafkaMsg)
 			})
 
 			Convey("And consumer.CommitAndRelease is called once", func() {
@@ -61,46 +63,34 @@ func TestMessageConsumerListen(t *testing.T) {
 		Convey("When the eventReceiver.ProcessMessage returns an error", func() {
 			avro, _ := schema.ReportEventSchema.Marshal(reportEvent)
 			handlerErr := errors.New("Flubba Wubba Dub Dub")
-			kafkaMsg, kafkaConsumer, _ := setUp(avro, nil)
+			kafkaMsg, kafkaConsumer, receiver := setUp(avro, handlerErr)
 
-			onHandle := make(chan bool)
-
-			receiverMock := &mocks.ReceiverMock{
-				ProcessMessageFunc: func(ctx context.Context, event kafka.Message) error {
-					go func() {
-						<-time.After(time.Second * 2)
-						onHandle <- true
-					}()
-					return handlerErr
-				},
-			}
-
-			consumer := NewConsumer(kafkaConsumer, receiverMock, time.Second*10)
+			consumer := NewConsumer(kafkaConsumer, receiver, time.Second*10)
 			consumer.Listen(ctx)
 
 			kafkaConsumer.Channels().Upstream <- kafkaMsg
 
 			select {
-			case <-onHandle: // wait for onHandle to receive before performing test assertions.
-				log.Event(ctx, "message handled as expected", log.INFO)
+			case <-kafkaMsg.UpstreamDone():
+				log.Event(ctx, "message released", log.INFO)
 			case <-time.After(time.Second * 5):
 				log.Event(ctx, "failing test: expected behaviour did not happen before timeout", log.INFO)
 				t.FailNow()
 			}
 
 			consumer.Close(nil)
+			<-consumer.closed
 
 			Convey("Then eventReceiver.ProcessMessage is called once with the expected parameters", func() {
-				params := receiverMock.ProcessMessageCalls()
-				So(len(params), ShouldEqual, 1)
-				So(params[0].Event, ShouldResemble, kafkaMsg)
+				calls := receiver.ProcessMessageCalls()
+				So(calls, ShouldHaveLength, 1)
+				So(calls[0].Event, ShouldResemble, kafkaMsg)
 			})
 
-			Convey("And eventMsg.Commit is never called", func() {
-				So(len(kafkaMsg.CommitAndReleaseCalls()), ShouldEqual, 0)
+			Convey("And eventMsg.Commit is called", func() {
+				So(len(kafkaMsg.CommitAndReleaseCalls()), ShouldEqual, 1)
 			})
 		})
-
 	})
 }
 
