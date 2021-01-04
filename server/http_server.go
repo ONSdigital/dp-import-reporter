@@ -2,12 +2,12 @@ package server
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-import-reporter/logging"
-	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/server"
+	"net/http"
+
+	dphttp "github.com/ONSdigital/dp-net/http"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"net/http"
 )
 
 //go:generate moq -out ../mocks/server_generated_mocks.go -pkg mocks . ClearableCache
@@ -16,21 +16,20 @@ type ClearableCache interface {
 	Clear()
 }
 
-var httpServer *server.Server
-var logger = logging.Logger{"sever.HTTPServer"}
+var httpServer *dphttp.Server
 
-func Start(cache ClearableCache, bindAdd string, errorChan chan error) {
+func Start(ctx context.Context, cache ClearableCache, bindAdd string, errorChan chan error) {
 	router := mux.NewRouter()
 	router.Path("/healthcheck").Methods(http.MethodGet).HandlerFunc(HealthCheck)
 	router.Path("/dropcache").Methods(http.MethodPost).HandlerFunc(ClearCache(cache))
 
-	httpServer = server.New(bindAdd, router)
+	httpServer = dphttp.NewServer(bindAdd, router)
 
 	// Disable this here to allow main to manage graceful shutdown of the entire app.
 	httpServer.HandleOSSignals = false
 
 	go func() {
-		log.Info("[HTTPServer]: starting import-reporter HTTP server", log.Data{
+		log.Event(ctx, "[HTTPServer]: starting import-reporter HTTP server", log.INFO, log.Data{
 			"/healthcheck": http.MethodGet,
 			"/dropcache":   http.MethodPost,
 		})
@@ -42,18 +41,20 @@ func Start(cache ClearableCache, bindAdd string, errorChan chan error) {
 
 func ClearCache(cache ClearableCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		logger.Info("dropping import-reporter cache", nil)
+		ctx := r.Context()
+		log.Event(ctx, "dropping import-reporter cache", log.INFO)
 		cache.Clear()
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
-	logger.Info("health check endpoint", nil)
+	ctx := r.Context()
+	log.Event(ctx, "health check endpoint", log.INFO)
 	w.WriteHeader(http.StatusOK)
 }
 
 func Shutdown(ctx context.Context) {
 	httpServer.Shutdown(ctx)
-	logger.Info("graceful shutdown complete", nil)
+	log.Event(ctx, "graceful shutdown complete", log.INFO)
 }

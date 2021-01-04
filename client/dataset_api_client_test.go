@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ONSdigital/dp-import-reporter/mocks"
@@ -40,13 +41,15 @@ var (
 	errMock = errors.New("boom")
 )
 
+var ctx = context.Background()
+
 func TestDatasetAPIClientGetInstance(t *testing.T) {
 	Convey("Given a correctly configured DatasetAPIClient", t, func() {
 		body, _ := json.Marshal(validInstance)
 		respBodyReader, _, httpClient, cli := setup(body, http.StatusOK)
 
 		Convey("When GetInstance is called with valid parameters", func() {
-			i, err := cli.GetInstance(testInstanceID)
+			i, err := cli.GetInstance(ctx, testInstanceID)
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldResemble, validInstance)
@@ -78,7 +81,7 @@ func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 
 		Convey("When GetInstance is invoked", func() {
 
-			i, err := cli.GetInstance(testInstanceID)
+			i, err := cli.GetInstance(ctx, testInstanceID)
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
@@ -110,7 +113,7 @@ func TestDatasetAPIClientGetInstanceHttpStatus(t *testing.T) {
 
 		Convey("When GetInstance is invoked", func() {
 
-			i, err := cli.GetInstance(testInstanceID)
+			i, err := cli.GetInstance(ctx, testInstanceID)
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
@@ -148,7 +151,7 @@ func TestDatasetAPIClientGetInstanceResponseBodyReadErr(t *testing.T) {
 
 		Convey("When GetInstance is invoked", func() {
 
-			i, err := cli.GetInstance(testInstanceID)
+			i, err := cli.GetInstance(ctx, testInstanceID)
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
@@ -181,7 +184,7 @@ func TestDatasetAPIClientGetInstanceUnmarshallErr(t *testing.T) {
 
 		Convey("When GetInstance is invoked", func() {
 
-			i, err := cli.GetInstance(testInstanceID)
+			i, err := cli.GetInstance(ctx, testInstanceID)
 
 			Convey("Then the returned values are as expected", func() {
 				So(i, ShouldBeNil)
@@ -208,7 +211,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 		_, _, httpClient, cli := setup(nil, http.StatusOK)
 
 		Convey("When AddEventToInstance is called", func() {
-			err := cli.AddEventToInstance("", nil)
+			err := cli.AddEventToInstance(ctx, "", nil)
 
 			Convey("Then the datasetAPI returns the expected error", func() {
 				So(err.Error(), ShouldResemble, errors.Wrap(errValidation, "AddEventToInstance requires a non empty instanceID").Error())
@@ -224,7 +227,7 @@ func TestDatasetAPIClientAddEventToInstanceInvalidParams(t *testing.T) {
 		_, _, httpClient, cli := setup(nil, http.StatusOK)
 
 		Convey("When AddEventToInstance is called", func() {
-			err := cli.AddEventToInstance(testInstanceID, nil)
+			err := cli.AddEventToInstance(ctx, testInstanceID, nil)
 
 			Convey("Then the datasetAPI returns the expected error", func() {
 				So(err.Error(), ShouldResemble, errors.Wrap(errValidation, "AddEventToInstance requires a non empty event").Error())
@@ -246,7 +249,7 @@ func TestDatasetAPIClientAddEventToInstanceHttpCliErr(t *testing.T) {
 		}
 
 		Convey("When httpClient.Do returns an error", func() {
-			err := cli.AddEventToInstance(testInstanceID, event)
+			err := cli.AddEventToInstance(ctx, testInstanceID, event)
 
 			Convey("Then the expected error is returned", func() {
 				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "AddEventToInstance HTTPClient.doRequest returned an error").Error())
@@ -268,7 +271,7 @@ func TestDatasetAPIClientAddEventToInstanceUnexpectedStatus(t *testing.T) {
 
 		Convey("When the returned HTTP status is not 201 CREATED", func() {
 
-			err := cli.AddEventToInstance(testInstanceID, event)
+			err := cli.AddEventToInstance(ctx, testInstanceID, event)
 
 			Convey("Then the expected error is returned", func() {
 				url := fmt.Sprintf(addInstanceEventURL, host, testInstanceID)
@@ -290,7 +293,7 @@ func TestDatasetAPIClientAddEventToInstance(t *testing.T) {
 		_, _, httpClient, cli := setup(nil, http.StatusCreated)
 
 		Convey("When AddEventToInstance is called", func() {
-			err := cli.AddEventToInstance(testInstanceID, event)
+			err := cli.AddEventToInstance(ctx, testInstanceID, event)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -311,7 +314,7 @@ func TestDatasetAPIClientUpdateInstanceStatusInvalidParams(t *testing.T) {
 		_, _, httpClient, cli := setup(nil, 0)
 
 		Convey("When UpdateInstanceStatus is called with an empty instanceID", func() {
-			err := cli.UpdateInstanceStatus("", nil)
+			err := cli.UpdateInstanceStatus(ctx, "", nil)
 
 			Convey("Then the expected error is returned", func() {
 				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "UpdateInstanceStatus requires a non empty instanceID").Error())
@@ -323,7 +326,7 @@ func TestDatasetAPIClientUpdateInstanceStatusInvalidParams(t *testing.T) {
 		})
 
 		Convey("When UpdateInstanceStatus is called with an nil state", func() {
-			err := cli.UpdateInstanceStatus(testInstanceID, nil)
+			err := cli.UpdateInstanceStatus(ctx, testInstanceID, nil)
 
 			Convey("Then the expected error is returned", func() {
 				So(err.Error(), ShouldEqual, errors.Wrap(errValidation, "UpdateInstanceStatus requires a non nil state").Error())
@@ -341,7 +344,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 		_, response, httpClient, cli := setup(nil, http.StatusOK)
 
 		Convey("When UpdateInstanceStatus is called", func() {
-			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
+			err := cli.UpdateInstanceStatus(ctx, testInstanceID, &model.State{State: "failed"})
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -358,7 +361,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 			httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
 				return nil, errMock
 			}
-			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
+			err := cli.UpdateInstanceStatus(ctx, testInstanceID, &model.State{State: "failed"})
 
 			Convey("Then the expected error is returned", func() {
 				So(err.Error(), ShouldEqual, errors.Wrap(errMock, "UpdateInstanceStatus HTTPClient.doRequest returned an error").Error())
@@ -374,7 +377,7 @@ func TestDatasetAPIClientUpdateInstanceStatus(t *testing.T) {
 
 		Convey("When httpClient.Do returns an incorrect HTTP status", func() {
 			response.StatusCode = http.StatusBadRequest
-			err := cli.UpdateInstanceStatus(testInstanceID, &model.State{State: "failed"})
+			err := cli.UpdateInstanceStatus(ctx, testInstanceID, &model.State{State: "failed"})
 
 			Convey("Then the expected error is returned", func() {
 				url := fmt.Sprintf(putInstanceStateURL, host, testInstanceID)

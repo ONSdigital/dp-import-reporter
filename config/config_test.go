@@ -21,6 +21,8 @@ var (
 		GracefulShutdownTimeout: time.Second * 5,
 		ServiceAuthToken:        "1D6C47C1-8F42-4F64-9AB4-6E5A16F89607",
 		ZebedeeURL:              "http://localhost:8082",
+		KafkaVersion:            "1.0.2",
+		KafkaOffsetOldest:       true,
 	}
 
 	errMock = errors.New("boom")

@@ -21,6 +21,8 @@ type Config struct {
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	ServiceAuthToken        string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 	ZebedeeURL              string        `envconfig:"ZEBEDEE_URL"`
+	KafkaVersion            string        `envconfig:"KAFKA_VERSION"`
+	KafkaOffsetOldest       bool          `envconfig:"KAFKA_OFFSET_OLDEST"`
 }
 
 var config *Config
@@ -44,6 +46,8 @@ func Get() (*Config, error) {
 		GracefulShutdownTimeout: time.Second * 5,
 		ServiceAuthToken:        "1D6C47C1-8F42-4F64-9AB4-6E5A16F89607",
 		ZebedeeURL:              "http://localhost:8082",
+		KafkaVersion:            "1.0.2",
+		KafkaOffsetOldest:       true,
 	}
 
 	if err := processConfig("", config); err != nil {
