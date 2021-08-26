@@ -11,7 +11,7 @@ import (
 	"github.com/ONSdigital/dp-import-reporter/schema"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
 	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -40,9 +40,9 @@ func TestMessageConsumerListen(t *testing.T) {
 
 			select {
 			case <-kafkaMsg.UpstreamDone():
-				log.Event(ctx, "message committed as expected", log.INFO)
+				log.Info(ctx, "message committed as expected")
 			case <-time.After(time.Second * 5):
-				log.Event(ctx, "failing test: expected behaviour failed to happen before timeout", log.INFO)
+				log.Info(ctx, "failing test: expected behaviour failed to happen before timeout")
 				t.FailNow()
 			}
 
@@ -72,9 +72,9 @@ func TestMessageConsumerListen(t *testing.T) {
 
 			select {
 			case <-kafkaMsg.UpstreamDone():
-				log.Event(ctx, "message released", log.INFO)
+				log.Info(ctx, "message released")
 			case <-time.After(time.Second * 5):
-				log.Event(ctx, "failing test: expected behaviour did not happen before timeout", log.INFO)
+				log.Info(ctx, "failing test: expected behaviour did not happen before timeout")
 				t.FailNow()
 			}
 

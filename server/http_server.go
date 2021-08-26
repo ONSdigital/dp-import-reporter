@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	dphttp "github.com/ONSdigital/dp-net/http"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
@@ -29,7 +29,7 @@ func Start(ctx context.Context, cache ClearableCache, bindAdd string, errorChan 
 	httpServer.HandleOSSignals = false
 
 	go func() {
-		log.Event(ctx, "[HTTPServer]: starting import-reporter HTTP server", log.INFO, log.Data{
+		log.Info(ctx, "[HTTPServer]: starting import-reporter HTTP server", log.Data{
 			"/healthcheck": http.MethodGet,
 			"/dropcache":   http.MethodPost,
 		})
@@ -42,7 +42,7 @@ func Start(ctx context.Context, cache ClearableCache, bindAdd string, errorChan 
 func ClearCache(cache ClearableCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		log.Event(ctx, "dropping import-reporter cache", log.INFO)
+		log.Info(ctx, "dropping import-reporter cache")
 		cache.Clear()
 		w.WriteHeader(http.StatusOK)
 	}
@@ -50,11 +50,11 @@ func ClearCache(cache ClearableCache) http.HandlerFunc {
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	log.Event(ctx, "health check endpoint", log.INFO)
+	log.Info(ctx, "health check endpoint")
 	w.WriteHeader(http.StatusOK)
 }
 
 func Shutdown(ctx context.Context) {
 	httpServer.Shutdown(ctx)
-	log.Event(ctx, "graceful shutdown complete", log.INFO)
+	log.Info(ctx, "graceful shutdown complete")
 }

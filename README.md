@@ -1,15 +1,13 @@
-dp-import-reporter
-================
+# dp-import-reporter
 
-### Getting started
+## Getting started
 
 Service is authenticated against `zebedee`, one can run [dp-auth-api-stub](https://github.com/ONSdigital/dp-auth-api-stub) to mimic
 service identity check in zebedee.
 
 Run `make debug`
 
-### Kafka scripts
-
+## Kafka scripts
 
 Scripts for updating and debugging Kafka can be found [here](https://github.com/ONSdigital/dp-data-tools)(dp-data-tools)
 
@@ -29,14 +27,12 @@ Scripts for updating and debugging Kafka can be found [here](https://github.com/
 | SERVICE_AUTH_TOKEN        | AB0A5CFA-3C55-4FA8-AACC-F98039BED0AC | The service authorization token
 | ZEBEDEE_URL               | http://localhost:8082                | The host name for Zebedee
 
-
-
-### Contributing
+## Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-### License
+## License
 
-Copyright © 2016-2017, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2016-2021, Office for National Statistics (https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.

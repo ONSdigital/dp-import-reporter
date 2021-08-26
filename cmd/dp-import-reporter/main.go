@@ -17,7 +17,7 @@ import (
 	"github.com/ONSdigital/dp-import-reporter/message"
 	"github.com/ONSdigital/dp-import-reporter/server"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/coocood/freecache"
 )
 
@@ -40,17 +40,17 @@ func main() {
 
 	cfg, err := config.Get()
 	if err != nil {
-		log.Event(ctx, "config.get returned error", log.ERROR, log.Error(err))
+		log.Error(ctx, "config.get returned error", err)
 		os.Exit(1)
 	}
 
-	log.Event(ctx, "successfully loaded dp-import-reporter configuration", log.INFO, log.Data{
+	log.Info(ctx, "successfully loaded dp-import-reporter configuration", log.Data{
 		"config": cfg,
 	})
 
 	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.ServiceAuthToken, cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, &http.Client{}, ResponseBodyReader{})
 	if err != nil {
-		log.Event(ctx, "error creating new dataset api client", log.ERROR, log.Error(err))
+		log.Error(ctx, "error creating new dataset api client", err)
 		os.Exit(1)
 	}
 
@@ -93,7 +93,7 @@ func main() {
 
 	// create the report event kafka kafkaConsumer.
 	if err != nil {
-		log.Event(ctx, "error while attempting to create kafka kafkaConsumer", log.ERROR, log.Error(err))
+		log.Error(ctx, "error while attempting to create kafka kafkaConsumer", err)
 		os.Exit(1)
 	}
 
@@ -105,14 +105,14 @@ func main() {
 	// block until a fatal event happens
 	select {
 	case sig := <-signals:
-		log.Event(ctx, "os signal received commencing graceful shutdown", log.INFO, log.Data{"signal": sig.String()})
+		log.Info(ctx, "os signal received commencing graceful shutdown", log.Data{"signal": sig.String()})
 	case err = <-kafkaConsumer.Channels().Errors:
-		log.Event(ctx, "kafkaConsumer errors chan received an error commencing graceful shutdown", log.ERROR, log.Error(err))
+		log.Error(ctx, "kafkaConsumer errors chan received an error commencing graceful shutdown", err)
 	case err = <-errorChannel:
-		log.Event(ctx, "errors channel received an error commencing graceful shutdown", log.ERROR, log.Error(err))
+		log.Error(ctx, "errors channel received an error commencing graceful shutdown", err)
 	}
 
-	log.Event(ctx, "attempting graceful shutdown of service", log.INFO)
+	log.Info(ctx, "attempting graceful shutdown of service")
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
 	go func() {
@@ -127,7 +127,7 @@ func main() {
 	if err == nil && ctx.Err() != context.Canceled {
 		err = ctx.Err()
 	}
-	log.Event(ctx, "shutdown complete", log.INFO)
+	log.Info(ctx, "shutdown complete")
 	if err != nil {
 		os.Exit(1)
 	}

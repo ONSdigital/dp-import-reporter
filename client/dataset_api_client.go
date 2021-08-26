@@ -10,7 +10,7 @@ import (
 	"reflect"
 
 	"github.com/ONSdigital/dp-import-reporter/model"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/pkg/errors"
 )
 
@@ -114,7 +114,7 @@ func (cli *DatasetAPIClient) GetInstance(ctx context.Context, instanceID string)
 	if err = json.Unmarshal(body, &instance); err != nil {
 		return nil, errors.Wrap(err, "GetInstance error while attempting to unmarshal HTTP response body into model.Instance")
 	}
-	log.Event(ctx, "GetInstance completed successfully", log.INFO, log.Data{instanceKey: instance})
+	log.Info(ctx, "GetInstance completed successfully", log.Data{instanceKey: instance})
 	return &instance, err
 }
 
@@ -143,7 +143,7 @@ func (cli *DatasetAPIClient) AddEventToInstance(ctx context.Context, instanceID 
 	if resp.StatusCode != http.StatusCreated {
 		return incorrectStatusError("AddEventToInstance", url, http.MethodPost, http.StatusCreated, resp.StatusCode)
 	}
-	log.Event(ctx, "AddEventToInstance completed successfully", log.INFO, logData)
+	log.Info(ctx, "AddEventToInstance completed successfully", logData)
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (cli *DatasetAPIClient) UpdateInstanceStatus(ctx context.Context, instanceI
 	if resp.StatusCode != http.StatusOK {
 		return incorrectStatusError("UpdateInstanceStatus", url, http.MethodPut, http.StatusOK, resp.StatusCode)
 	}
-	log.Event(ctx, "UpdateInstanceStatus completed successfully", log.INFO, logData)
+	log.Info(ctx, "UpdateInstanceStatus completed successfully", logData)
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (cli *DatasetAPIClient) doRequest(ctx context.Context, url string, httpMeth
 		logData[requestBodyKey] = string(body)
 
 		if err != nil {
-			log.Event(ctx, "error marshalling", log.Error(err), log.ERROR, logData)
+			log.Error(ctx, "error marshalling", err, logData)
 			return nil, errors.Wrap(err, fmt.Sprintf("error when attempting to marshal %s to json", reflect.TypeOf(payload).Name()))
 		}
 
@@ -209,12 +209,12 @@ func (cli *DatasetAPIClient) doRequest(ctx context.Context, url string, httpMeth
 	req.Header.Set(authTokenHeader, cli.datasetAPIAuthToken)
 	req.Header.Set(authorizationHeader, cli.authToken)
 
-	log.Event(ctx, "making HTTP request", log.INFO, logData)
+	log.Info(ctx, "making HTTP request", logData)
 	resp, err := cli.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	log.Event(ctx, "HTTP response received", log.INFO)
+	log.Info(ctx, "HTTP response received")
 	return resp, nil
 }
 
