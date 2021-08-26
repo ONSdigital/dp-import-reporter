@@ -31,7 +31,7 @@ job "dp-import-reporter" {
       driver = "docker"
 
       artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-import-reporter/{{REVISION}}.tar.gz"
+        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-import-reporter/{{PROFILE}}/{{RELEASE}}.tar.gz"
       }
 
       config {
