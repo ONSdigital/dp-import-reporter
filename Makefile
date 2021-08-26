@@ -1,5 +1,3 @@
-SHELL=bash
-
 MAIN=dp-import-reporter
 BUILD=build
 BUILD_ARCH=$(BUILD)/$(GOOS)-$(GOARCH)
@@ -21,16 +19,13 @@ build:
 	go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(MAIN) cmd/$(MAIN)/main.go
 
 .PHONY: debug
-debug: build
+debug:
 	HUMAN_LOG=1 go run -race cmd/$(MAIN)/main.go
 
 .PHONY: test
 test:
-	go test -v -cover $(shell go list ./... | grep -v /vendor/)
+	go test -race -cover ./...
 
 .PHONY: generate
 generate:
-	pkg_prefix=$${PWD/$$GOPATH\/src\/}; \
-	for p in $(shell go list ./...); do d=$${p#$$pkg_prefix/}; [[ -d $$d ]] || continue; cd $$d || break; : echo $$d; go generate -v || break; cd - > /dev/null; done
-
-.PHONY: build debug test
+	go generate -v ./...
