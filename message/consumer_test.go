@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
@@ -94,13 +93,13 @@ func TestMessageConsumerListen(t *testing.T) {
 	})
 }
 
-func setUp(avroBytes []byte, handlerErr error) (*kafkatest.Message, *kafkatest.MessageConsumer, *mocks.ReceiverMock) {
+func setUp(avroBytes []byte, handlerErr error) (*kafkatest.Message, *kafkatest.MessageConsumer, *ReceiverMock) {
 
 	kafkaMsg := kafkatest.NewMessage(avroBytes, 0)
 
 	consumerMock := kafkatest.NewMessageConsumer(true)
 
-	eventHandler := &mocks.ReceiverMock{
+	eventHandler := &ReceiverMock{
 		ProcessMessageFunc: func(ctx context.Context, event kafka.Message) error {
 			return handlerErr
 		},

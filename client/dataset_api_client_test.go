@@ -1,23 +1,20 @@
 package client
 
 import (
-	"context"
-	"testing"
-
-	"github.com/ONSdigital/dp-import-reporter/mocks"
-	. "github.com/smartystreets/goconvey/convey"
-
 	"bytes"
+	"context"
 	"encoding/json"
-
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"testing"
+
+	"github.com/pkg/errors"
+	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/ONSdigital/dp-import-reporter/model"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -480,11 +477,11 @@ func TestNewDatasetAPIClient(t *testing.T) {
 	})
 }
 
-func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Response, *mocks.HTTPClientMock, *DatasetAPIClient) {
+func setup(body []byte, status int) (*ResponseBodyReaderMock, *http.Response, *HTTPClientMock, *DatasetAPIClient) {
 	reader := bytes.NewReader(body)
 	readeCloser := ioutil.NopCloser(reader)
 
-	respBodyReader := &mocks.ResponseBodyReaderMock{
+	respBodyReader := &ResponseBodyReaderMock{
 		ReadFunc: func(r io.Reader) ([]byte, error) {
 			return body, nil
 		},
@@ -495,7 +492,7 @@ func setup(body []byte, status int) (*mocks.ResponseBodyReaderMock, *http.Respon
 		StatusCode: status,
 	}
 
-	httpClient := &mocks.HTTPClientMock{
+	httpClient := &HTTPClientMock{
 		DoFunc: func(req *http.Request) (*http.Response, error) {
 			return response, nil
 		},

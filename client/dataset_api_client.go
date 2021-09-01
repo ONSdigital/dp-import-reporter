@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate moq -out ../mocks/dataset_api_generated_mocks.go -pkg mocks . HTTPClient ResponseBodyReader
+//go:generate moq -out ./dataset_api_generated_mocks_test.go . HTTPClient ResponseBodyReader
 
 const (
 	getInstanceURL      = "%s/instances/%s"

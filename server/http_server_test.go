@@ -1,11 +1,11 @@
 package server
 
 import (
-	"github.com/ONSdigital/dp-import-reporter/mocks"
-	. "github.com/smartystreets/goconvey/convey"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestDropCache(t *testing.T) {
@@ -13,7 +13,7 @@ func TestDropCache(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodPost, "/dropcache", nil)
 
-		cacheMock := &mocks.ClearableCacheMock{
+		cacheMock := &ClearableCacheMock{
 			ClearFunc: func() {
 				// Do nothing
 			},

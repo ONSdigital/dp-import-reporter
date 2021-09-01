@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
-//go:generate moq -out ../mocks/message_generated_mocks.go -pkg mocks . Receiver
+//go:generate moq -out ./message_generated_mocks_test.go . Receiver
 
 // Receiver defines a struct that processes a kafka message
 type Receiver interface {

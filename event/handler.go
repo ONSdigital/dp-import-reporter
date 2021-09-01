@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate moq -out ../mocks/event_generated_mocks.go -pkg mocks . DatasetAPICli Cache EventHandler
+//go:generate moq -out ./event_generated_mocks_test.go . DatasetAPICli Cache EventHandler
 
 const (
 	failed         = "failed"
