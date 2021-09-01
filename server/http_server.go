@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate moq -out ../mocks/server_generated_mocks.go -pkg mocks . ClearableCache
+//go:generate moq -out ./server_generated_mocks_test.go . ClearableCache
 
 type ClearableCache interface {
 	Clear()
