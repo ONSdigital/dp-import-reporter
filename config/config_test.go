@@ -12,7 +12,12 @@ var (
 	expectedConfig = &Config{
 		ReportEventGroup:        "dp-import-reporter",
 		ReportEventTopic:        "report-events",
-		Brokers:                 []string{"localhost:9092"},
+		KafkaLegacyBrokers:      []string{"localhost:9092"},
+		KafkaLegacyVersion:      "1.0.2",
+		KafkaBrokers:            []string{"localhost:9092"},
+		KafkaVersion:            "1.0.2",
+		KafkaSecProtocol:        "",
+		KafkaOffsetOldest:       true,
 		DatasetAPIURL:           "http://localhost:22000",
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		BindAddress:             ":22200",
@@ -21,8 +26,6 @@ var (
 		GracefulShutdownTimeout: time.Second * 5,
 		ServiceAuthToken:        "1D6C47C1-8F42-4F64-9AB4-6E5A16F89607",
 		ZebedeeURL:              "http://localhost:8082",
-		KafkaVersion:            "1.0.2",
-		KafkaOffsetOldest:       true,
 	}
 
 	errMock = errors.New("boom")
