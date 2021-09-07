@@ -113,7 +113,7 @@ func main() {
 		Offset:       &kafkaOffset,
 		KafkaVersion: &cfg.KafkaVersion,
 	}
-	if cfg.KafkaSecProtocol == "TLS" {
+	if cfg.KafkaSecProtocol == config.KafkaSecProtocolTLS {
 		cgConfig.SecurityConfig = kafka.GetSecurityConfig(
 			cfg.KafkaSecCACerts,
 			cfg.KafkaSecClientCert,

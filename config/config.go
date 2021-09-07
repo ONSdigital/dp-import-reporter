@@ -8,6 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const KafkaSecProtocolTLS = "TLS"
+
 // Config struct to hold application configuration.
 type Config struct {
 	BindAddress             string        `envconfig:"BIND_ADDR"`
@@ -61,6 +63,10 @@ func Get() (*Config, error) {
 
 	if err := processConfig("", config); err != nil {
 		return nil, errors.Wrap(err, "config: error while attempting to load environment config")
+	}
+
+	if config.KafkaSecProtocol != "" && config.KafkaSecProtocol != KafkaSecProtocolTLS {
+		return nil, errors.New("KAFKA_SEC_PROTO has invalid value")
 	}
 
 	config.ServiceAuthToken = "Bearer " + config.ServiceAuthToken
