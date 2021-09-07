@@ -36,7 +36,7 @@ Scripts for updating and debugging Kafka can be found [here](https://github.com/
 | SERVICE_AUTH_TOKEN        | AB0A5CFA-3C55-4FA8-AACC-F98039BED0AC | The service authorization token
 | ZEBEDEE_URL               | http://localhost:8082                | The host name for Zebedee
 
-[ref-1]:  https://github.com/ONSdigital/dp-kafka/tree/main/examples#tls 'kafka TLS examples documentation'
+[ref-1]: https://github.com/ONSdigital/dp-kafka/tree/main/examples#tls kafka TLS examples documentation
 
 ## Contributing
 
@@ -44,6 +44,6 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ## License
 
-Copyright © 2016-2021, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2016-2021, [Office for National Statistics](https://www.ons.gov.uk)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
