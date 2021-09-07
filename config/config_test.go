@@ -1,9 +1,11 @@
 package config
 
 import (
+	"os"
 	"testing"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -131,5 +133,33 @@ func TestConfigNilSuccess(t *testing.T) {
 				So(mockProcessCgf.specCalls[0], ShouldResemble, expectedConfig)
 			})
 		})
+	})
+}
+
+func TestGetReturnsCorrectValues(t *testing.T) {
+	Convey("Given a clean environment", t, func() {
+		os.Clearenv()
+		config = nil
+		processConfig = envconfig.Process
+
+		Convey("When default configuration is obtained", func() {
+			configuration, err := Get()
+
+			Convey("Then expected configuration is returned", func() {
+				So(err, ShouldBeNil)
+				So(configuration, ShouldResemble, expectedConfig)
+			})
+		})
+
+		Convey("When configuration is called with an invalid security setting", func() {
+			os.Setenv("KAFKA_SEC_PROTO", "ssl")
+			configuration, err := Get()
+
+			Convey("Then an error is returned", func() {
+				So(configuration, ShouldBeNil)
+				So(err.Error(), ShouldEqual, "KAFKA_SEC_PROTO has invalid value")
+			})
+		})
+
 	})
 }
