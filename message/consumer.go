@@ -5,10 +5,10 @@ import (
 	"time"
 
 	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
-//go:generate moq -out ../mocks/message_generated_mocks.go -pkg mocks . Receiver
+//go:generate moq -out ./message_generated_mocks_test.go . Receiver
 
 // Receiver defines a struct that processes a kafka message
 type Receiver interface {
@@ -49,14 +49,14 @@ func (c *Consumer) Listen(ctx context.Context) {
 					break
 				}
 				// log.Event(ctx, "incoming received a message", log.INFO, log.Data{"msg": eventMsg})
-				log.Event(ctx, "incoming received a message", log.INFO)
+				log.Info(ctx, "incoming received a message")
 
 				if err := c.eventReceiver.ProcessMessage(ctx, eventMsg); err != nil {
-					log.Event(ctx, "error returned from eventReceiver.ProcessMessage ", log.ERROR, log.Error(err))
+					log.Error(ctx, "error returned from eventReceiver.ProcessMessage ", err)
 				}
 				eventMsg.CommitAndRelease()
 			case <-c.ctx.Done():
-				log.Event(ctx, "context done, consumer.Listen loop closing", log.INFO)
+				log.Info(ctx, "context done, consumer.Listen loop closing")
 				keepListening = false
 			}
 		}
@@ -89,8 +89,8 @@ func (c Consumer) Close(ctx context.Context) {
 	// wait for the consumer to signal that it has exited or the context timeout occurs
 	select {
 	case <-c.closed:
-		log.Event(ctx, "gracefully shutdown consumer loop", log.INFO)
+		log.Info(ctx, "gracefully shutdown consumer loop")
 	case <-ctx.Done():
-		log.Event(ctx, "forced shutdown of consumer loop", log.INFO)
+		log.Info(ctx, "forced shutdown of consumer loop")
 	}
 }

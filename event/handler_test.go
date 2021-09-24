@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -123,8 +122,8 @@ func TestReportEventHandlerHandleEventEventInCache(t *testing.T) {
 	})
 }
 
-func setup() (*mocks.DatasetAPICliMock, *mocks.CacheMock) {
-	return &mocks.DatasetAPICliMock{
+func setup() (*DatasetAPICliMock, *CacheMock) {
+	return &DatasetAPICliMock{
 			AddEventToInstanceFunc: func(ctx context.Context, instanceID string, e *model.Event) error {
 				return nil
 			},
@@ -134,7 +133,7 @@ func setup() (*mocks.DatasetAPICliMock, *mocks.CacheMock) {
 			UpdateInstanceStatusFunc: func(ctx context.Context, instanceID string, state *model.State) error {
 				return nil
 			},
-		}, &mocks.CacheMock{
+		}, &CacheMock{
 			GetFunc: func(key []byte) ([]byte, error) {
 				return nil, errors.New("not found")
 			},

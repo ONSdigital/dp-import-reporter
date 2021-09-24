@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/ONSdigital/dp-import-reporter/model"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/pkg/errors"
 )
 
-//go:generate moq -out ../mocks/event_generated_mocks.go -pkg mocks . DatasetAPICli Cache EventHandler
+//go:generate moq -out ./event_generated_mocks_test.go . DatasetAPICli Cache EventHandler
 
 const (
 	failed         = "failed"
@@ -47,7 +47,7 @@ type Handler struct {
 // already exist) & add to the local cache, otherwise update the cache time to live.
 func (h Handler) HandleEvent(ctx context.Context, e *model.ReportEvent) error {
 	logDetails := log.Data{reportEventKey: *e}
-	log.Event(ctx, "handling report event", log.INFO, logDetails)
+	log.Info(ctx, "handling report event", logDetails)
 
 	key, value, err := e.GenCacheKeyAndValue()
 	if err != nil {
@@ -55,7 +55,7 @@ func (h Handler) HandleEvent(ctx context.Context, e *model.ReportEvent) error {
 	}
 
 	if _, err := h.Cache.Get(key); err != nil {
-		log.Event(ctx, "report event not found in dp-import-reporter cache, retrieving instance from dataset API", log.INFO, logDetails)
+		log.Info(ctx, "report event not found in dp-import-reporter cache, retrieving instance from dataset API", logDetails)
 		i, err := h.DatasetAPI.GetInstance(ctx, e.InstanceID)
 		if err != nil {
 			return errors.Wrap(err, "datasetAPI.GetInstance return an error")
@@ -71,13 +71,13 @@ func (h Handler) HandleEvent(ctx context.Context, e *model.ReportEvent) error {
 		}
 
 		if !i.ContainsEvent(newEvent) {
-			log.Event(ctx, "report event not in instance.events, adding event to instance and persisting changes to dataset api", log.INFO, logDetails)
+			log.Info(ctx, "report event not in instance.events, adding event to instance and persisting changes to dataset api", logDetails)
 
 			if err := h.DatasetAPI.AddEventToInstance(ctx, i.InstanceID, newEvent); err != nil {
 				return errors.Wrap(err, "datasetAPI.AddEventToInstance returned an error")
 			}
 			if e.EventType == errorType && i.State != failed {
-				log.Event(ctx, "updating instance.status to failed and persisting changes to dataset api", log.INFO, logDetails)
+				log.Info(ctx, "updating instance.status to failed and persisting changes to dataset api", logDetails)
 
 				if err := h.DatasetAPI.UpdateInstanceStatus(ctx, i.InstanceID, statusFailed); err != nil {
 					return errors.Wrap(err, "datasetAPI.UpdateInstanceStatus return an error")
@@ -85,11 +85,11 @@ func (h Handler) HandleEvent(ctx context.Context, e *model.ReportEvent) error {
 			}
 		}
 
-		log.Event(ctx, "adding report event to dp-import-reporter cache", log.INFO, logDetails)
+		log.Info(ctx, "adding report event to dp-import-reporter cache", logDetails)
 		h.Cache.Set(key, value, h.ExpireSeconds)
 		return nil
 	}
-	log.Event(ctx, "report event found in dp-import-reporter cache, updating cache expiry time", log.INFO, logDetails)
+	log.Info(ctx, "report event found in dp-import-reporter cache, updating cache expiry time", logDetails)
 	// If the key exists in the cache delete it and set it again to reset the time to live
 	h.Cache.Del(key)
 	h.Cache.Set(key, value, h.ExpireSeconds)

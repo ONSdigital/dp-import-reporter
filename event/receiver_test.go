@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ONSdigital/dp-import-reporter/mocks"
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
 	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
@@ -27,7 +26,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 		avro, _ := schema.ReportEventSchema.Marshal(e)
 		kafkaMsg := kafkatest.NewMessage(avro, 0)
 
-		handler := &mocks.EventHandlerMock{
+		handler := &EventHandlerMock{
 			HandleEventFunc: func(ctx context.Context, e *model.ReportEvent) error {
 				return nil
 			},
@@ -67,7 +66,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 		})
 
 		Convey("When Handler.HandleEvent returns an error", func() {
-			handler := &mocks.EventHandlerMock{
+			handler := &EventHandlerMock{
 				HandleEventFunc: func(ctx context.Context, e *model.ReportEvent) error {
 					return errMock
 				},
