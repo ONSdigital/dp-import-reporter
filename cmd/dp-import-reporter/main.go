@@ -73,42 +73,6 @@ func main() {
 		kafkaOffset = kafka.OffsetOldest
 	}
 
-	var usingLegacy = false
-	var legacy_reportEventConsumer message.Consumer
-	var legacy_kafkaConsumer *kafka.ConsumerGroup
-	if cfg.KafkaBrokers[0] != cfg.KafkaLegacyBrokers[0] {
-		usingLegacy = true
-
-		legacy_cgConfig := &kafka.ConsumerGroupConfig{
-			Offset:       &kafkaOffset,
-			KafkaVersion: &cfg.KafkaLegacyVersion,
-		}
-		legacy_cgChannels := kafka.CreateConsumerGroupChannels(bufferSize)
-
-		// Create legacy kafka consumer - exit on channel validation error. Non-initialised consumers will not error at creation time.
-		legacy_kafkaConsumer, err = kafka.NewConsumerGroup(
-			ctx,
-			cfg.KafkaLegacyBrokers,
-			cfg.ReportEventTopic,
-			cfg.ReportEventGroup,
-			legacy_cgChannels,
-			legacy_cgConfig,
-		)
-		if err != nil {
-			log.Error(ctx, "error while attempting to create legacy kafkaConsumer", err)
-			os.Exit(1)
-		}
-
-		legacy_reportEventConsumer = message.NewConsumer(legacy_kafkaConsumer, eventReceiver, cfg.GracefulShutdownTimeout)
-		legacy_reportEventConsumer.Listen(ctx)
-
-		go func() {
-			err := <-legacy_kafkaConsumer.Channels().Errors
-			log.Error(ctx, "legacy kafka consumer errors chan received an error, triggering graceful shutdown", err)
-			errorChannel <- err
-		}()
-	}
-
 	cgConfig := &kafka.ConsumerGroupConfig{
 		Offset:       &kafkaOffset,
 		KafkaVersion: &cfg.KafkaVersion,
@@ -160,9 +124,6 @@ func main() {
 		defer cancel()
 
 		reportEventConsumer.Close(ctx)
-		if usingLegacy {
-			legacy_reportEventConsumer.Close(ctx)
-		}
 		server.Shutdown(ctx)
 	}()
 
