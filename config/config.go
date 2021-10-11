@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// KafkaSecProtocolTLS informs service to use TLS protocol for kafka
 const KafkaSecProtocolTLS = "TLS"
 
 // Config struct to hold application configuration.
@@ -22,8 +23,6 @@ type Config struct {
 	ZebedeeURL              string        `envconfig:"ZEBEDEE_URL"`
 	ReportEventTopic        string        `envconfig:"CONSUMER_TOPIC"`
 	ReportEventGroup        string        `envconfig:"CONSUMER_GROUP"`
-	KafkaLegacyBrokers      []string      `envconfig:"KAFKA_LEGACY_ADDR"`
-	KafkaLegacyVersion      string        `envconfig:"KAFKA_LEGACY_VERSION"`
 	KafkaBrokers            []string      `envconfig:"KAFKA_ADDR"`
 	KafkaVersion            string        `envconfig:"KAFKA_VERSION"`
 	KafkaSecProtocol        string        `envconfig:"KAFKA_SEC_PROTO"`
@@ -54,8 +53,6 @@ func Get() (*Config, error) {
 		ZebedeeURL:              "http://localhost:8082",
 		ReportEventTopic:        "report-events",
 		ReportEventGroup:        "dp-import-reporter",
-		KafkaLegacyBrokers:      []string{"localhost:9092"},
-		KafkaLegacyVersion:      "1.0.2",
 		KafkaBrokers:            []string{"localhost:9092"},
 		KafkaVersion:            "1.0.2",
 		KafkaOffsetOldest:       true,
