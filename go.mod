@@ -4,24 +4,24 @@ go 1.17
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0 // indirect
-	github.com/ONSdigital/dp-healthcheck v1.1.3 // indirect
-	github.com/ONSdigital/dp-kafka/v2 v2.4.3
+	github.com/ONSdigital/dp-healthcheck v1.2.3 // indirect
+	github.com/ONSdigital/dp-kafka/v2 v2.4.4
 	github.com/ONSdigital/dp-net v1.2.0
 	github.com/ONSdigital/go-ns v0.0.0-20210916104633-ac1c1c52327e
 	github.com/ONSdigital/log.go/v2 v2.0.9
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
-	github.com/Shopify/sarama v1.30.0 // indirect
+	github.com/Shopify/sarama v1.30.1 // indirect
 	github.com/coocood/freecache v1.1.1
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/smartystreets/goconvey v1.6.4
+	github.com/smartystreets/goconvey v1.7.2
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/net v0.0.0-20211007125505-59d4e928ea9d // indirect
-	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 )
 
 require (
