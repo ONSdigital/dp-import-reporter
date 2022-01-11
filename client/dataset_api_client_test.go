@@ -43,7 +43,8 @@ var ctx = context.Background()
 func TestDatasetAPIClientGetInstance(t *testing.T) {
 	Convey("Given a correctly configured DatasetAPIClient", t, func() {
 		body, _ := json.Marshal(validInstance)
-		respBodyReader, _, httpClient, cli := setup(body, http.StatusOK)
+		respBodyReader, response, httpClient, cli := setup(body, http.StatusOK)
+		defer response.Body.Close()
 
 		Convey("When GetInstance is called with valid parameters", func() {
 			i, err := cli.GetInstance(ctx, testInstanceID)
@@ -70,7 +71,8 @@ func TestDatasetAPIClientGetInstanceHttpCliErr(t *testing.T) {
 	Convey("Given httpClient.Do returns an error", t, func() {
 
 		body, _ := json.Marshal(validInstance)
-		respBodyReader, _, httpClient, cli := setup(body, http.StatusOK)
+		respBodyReader, response, httpClient, cli := setup(body, http.StatusOK)
+		defer response.Body.Close()
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
 			return nil, errMock
@@ -103,6 +105,7 @@ func TestDatasetAPIClientGetInstanceHttpStatus(t *testing.T) {
 
 		body, _ := json.Marshal(validInstance)
 		respBodyReader, response, httpClient, cli := setup(body, http.StatusBadRequest)
+		defer response.Body.Close()
 
 		httpClient.DoFunc = func(req *http.Request) (*http.Response, error) {
 			return response, nil

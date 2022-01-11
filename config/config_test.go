@@ -14,7 +14,7 @@ var (
 	expectedConfig = &Config{
 		ReportEventGroup:        "dp-import-reporter",
 		ReportEventTopic:        "report-events",
-		KafkaBrokers:            []string{"localhost:9092"},
+		KafkaBrokers:            []string{"localhost:9092", "localhost:9093", "localhost:9094"},
 		KafkaVersion:            "1.0.2",
 		KafkaSecProtocol:        "",
 		KafkaOffsetOldest:       true,

@@ -53,7 +53,7 @@ func Get() (*Config, error) {
 		ZebedeeURL:              "http://localhost:8082",
 		ReportEventTopic:        "report-events",
 		ReportEventGroup:        "dp-import-reporter",
-		KafkaBrokers:            []string{"localhost:9092"},
+		KafkaBrokers:            []string{"localhost:9092", "localhost:9093", "localhost:9094"},
 		KafkaVersion:            "1.0.2",
 		KafkaOffsetOldest:       true,
 	}
