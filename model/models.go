@@ -52,7 +52,7 @@ func (e *ReportEvent) GenCacheKeyAndValue() ([]byte, []byte, error) {
 	return key, val, err
 }
 
-//struct for eventhandler which handles the instance and the start of the api
+// ReportEvent is a struct for eventhandler which handles the instance and the start of the api
 type ReportEvent struct {
 	InstanceID  string `avro:"instance_id"`
 	EventType   string `avro:"event_type"`
@@ -60,13 +60,13 @@ type ReportEvent struct {
 	ServiceName string `avro:"service_name"`
 }
 
-//Instance provides a struct for all the instance information
+// Instance provides a struct for all the instance information
 type Instance struct {
 	InstanceID                string   `json:"id"`
 	NumberOfObservations      int64    `json:"total_observations"`
 	TotalInsertedObservations int64    `json:"total_inserted_observations,omitempty"`
 	State                     string   `json:"state"`
-	Events                    []*Event `json:"events, omit"`
+	Events                    []*Event `json:"events,omitempty"`
 }
 
 func (i *Instance) ContainsEvent(target *Event) bool {
@@ -82,7 +82,7 @@ func (i *Instance) ContainsEvent(target *Event) bool {
 	return false
 }
 
-//Event struct including the time
+// Event struct including the time
 type Event struct {
 	Type          string     `bson:"type,omitempty"           json:"type"`
 	Service       string     `bson:"service,omitempty"    	  json:"service"`
@@ -91,17 +91,18 @@ type Event struct {
 	MessageOffset string     `bson:"message_offset,omitempty" json:"message_offset"`
 }
 
-func (this *Event) EqualsIgnoreTime(that *Event) bool {
-	if this == nil && that == nil {
+// EqualsIgnoreTime compares the provided event message and offset with the pointer receiver.
+func (e *Event) EqualsIgnoreTime(that *Event) bool {
+	if e == nil && that == nil {
 		return false
 	}
-	if this == nil && that != nil {
+	if e == nil && that != nil {
 		return false
 	}
-	if this != nil && that == nil {
+	if e != nil && that == nil {
 		return false
 	}
-	return reflect.DeepEqual(this.Type, that.Type) && reflect.DeepEqual(this.MessageOffset, that.MessageOffset) && reflect.DeepEqual(this.Message, that.Message)
+	return reflect.DeepEqual(e.Type, that.Type) && reflect.DeepEqual(e.MessageOffset, that.MessageOffset) && reflect.DeepEqual(e.Message, that.Message)
 }
 
 // State struct representing the state of the dataset.
