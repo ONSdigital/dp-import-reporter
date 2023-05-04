@@ -51,8 +51,7 @@ func main() {
 	datasetAPIClient, err := client.NewDatasetAPIClient(cfg.ServiceAuthToken, cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, &http.Client{}, ResponseBodyReader{})
 	if err != nil {
 		log.Error(ctx, "error creating new dataset api client", err)
-		//os.Exit(1)
-		return
+		os.Exit(1)
 	}
 
 	cache := freecache.NewCache(cfg.CacheSize)
@@ -100,8 +99,7 @@ func main() {
 	)
 	if err != nil {
 		log.Error(ctx, "error while attempting to create kafka kafkaConsumer", err)
-		//os.Exit(1)
-		return
+		os.Exit(1)
 	}
 
 	// create event consumer
