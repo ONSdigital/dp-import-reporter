@@ -33,7 +33,7 @@ func (r ResponseBodyReader) Read(reader io.Reader) ([]byte, error) {
 func main() {
 	log.Namespace = "dp-import-reporter"
 
-	fmt.Printf("a test to exercise concourse - delete me when done\n")
+	fmt.Printf("a test to exercise concourse - 2 - delete me when done\n")
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
