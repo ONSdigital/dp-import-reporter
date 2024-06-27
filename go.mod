@@ -9,6 +9,12 @@ exclude github.com/gorilla/sessions v1.2.1
 //     - CVE-2022-29153 # pkg:golang/github.com/hashicorp/consul/api@v1.1.0
 replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 
+// [CVE-2023-48795] CWE-354: Improper Validation of Integrity Check Value
+replace golang.org/x/crypto => golang.org/x/crypto v0.17.0
+
+// [CVE-2023-39325] CWE-770: Allocation of Resources Without Limits or Throttling
+replace golang.org/x/net => golang.org/x/net v0.23.0
+
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0 // indirect
 	github.com/ONSdigital/dp-healthcheck v1.6.1 // indirect
@@ -24,9 +30,9 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/smartystreets/goconvey v1.8.0
-	golang.org/x/crypto v0.4.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 )
 
 require (
