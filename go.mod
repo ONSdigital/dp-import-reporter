@@ -1,19 +1,12 @@
 module github.com/ONSdigital/dp-import-reporter
 
-go 1.23.2
+go 1.23
 
 // to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
 
-// to avoid the following vulnerabilities:
-//     - CVE-2022-29153 # pkg:golang/github.com/hashicorp/consul/api@v1.1.0
-replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
-
-// [CVE-2023-48795] CWE-354: Improper Validation of Integrity Check Value
-replace golang.org/x/crypto => golang.org/x/crypto v0.17.0
-
-// [CVE-2023-39325] CWE-770: Allocation of Resources Without Limits or Throttling
-replace golang.org/x/net => golang.org/x/net v0.23.0
+// to avoid CVE-2022-29153
+exclude github.com/hashicorp/consul/api v1.1.0
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0 // indirect
@@ -36,7 +29,7 @@ require (
 )
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.261.0 // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.262.0 // indirect
 	github.com/ONSdigital/dp-net/v2 v2.12.0 // indirect
 	github.com/aws/aws-sdk-go v1.55.5 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -70,4 +63,5 @@ require (
 	go.opentelemetry.io/otel v1.32.0 // indirect
 	go.opentelemetry.io/otel/metric v1.32.0 // indirect
 	go.opentelemetry.io/otel/trace v1.32.0 // indirect
+	google.golang.org/protobuf v1.35.2 // indirect
 )
