@@ -15,25 +15,25 @@ var _ DatasetAPICli = &DatasetAPICliMock{}
 
 // DatasetAPICliMock is a mock implementation of DatasetAPICli.
 //
-// 	func TestSomethingThatUsesDatasetAPICli(t *testing.T) {
+//	func TestSomethingThatUsesDatasetAPICli(t *testing.T) {
 //
-// 		// make and configure a mocked DatasetAPICli
-// 		mockedDatasetAPICli := &DatasetAPICliMock{
-// 			AddEventToInstanceFunc: func(ctx context.Context, instanceID string, e *model.Event) error {
-// 				panic("mock out the AddEventToInstance method")
-// 			},
-// 			GetInstanceFunc: func(ctx context.Context, instanceID string) (*model.Instance, error) {
-// 				panic("mock out the GetInstance method")
-// 			},
-// 			UpdateInstanceStatusFunc: func(ctx context.Context, instanceID string, state *model.State) error {
-// 				panic("mock out the UpdateInstanceStatus method")
-// 			},
-// 		}
+//		// make and configure a mocked DatasetAPICli
+//		mockedDatasetAPICli := &DatasetAPICliMock{
+//			AddEventToInstanceFunc: func(ctx context.Context, instanceID string, e *model.Event) error {
+//				panic("mock out the AddEventToInstance method")
+//			},
+//			GetInstanceFunc: func(ctx context.Context, instanceID string) (*model.Instance, error) {
+//				panic("mock out the GetInstance method")
+//			},
+//			UpdateInstanceStatusFunc: func(ctx context.Context, instanceID string, state *model.State) error {
+//				panic("mock out the UpdateInstanceStatus method")
+//			},
+//		}
 //
-// 		// use mockedDatasetAPICli in code that requires DatasetAPICli
-// 		// and then make assertions.
+//		// use mockedDatasetAPICli in code that requires DatasetAPICli
+//		// and then make assertions.
 //
-// 	}
+//	}
 type DatasetAPICliMock struct {
 	// AddEventToInstanceFunc mocks the AddEventToInstance method.
 	AddEventToInstanceFunc func(ctx context.Context, instanceID string, e *model.Event) error
@@ -99,7 +99,8 @@ func (mock *DatasetAPICliMock) AddEventToInstance(ctx context.Context, instanceI
 
 // AddEventToInstanceCalls gets all the calls that were made to AddEventToInstance.
 // Check the length with:
-//     len(mockedDatasetAPICli.AddEventToInstanceCalls())
+//
+//	len(mockedDatasetAPICli.AddEventToInstanceCalls())
 func (mock *DatasetAPICliMock) AddEventToInstanceCalls() []struct {
 	Ctx        context.Context
 	InstanceID string
@@ -136,7 +137,8 @@ func (mock *DatasetAPICliMock) GetInstance(ctx context.Context, instanceID strin
 
 // GetInstanceCalls gets all the calls that were made to GetInstance.
 // Check the length with:
-//     len(mockedDatasetAPICli.GetInstanceCalls())
+//
+//	len(mockedDatasetAPICli.GetInstanceCalls())
 func (mock *DatasetAPICliMock) GetInstanceCalls() []struct {
 	Ctx        context.Context
 	InstanceID string
@@ -173,7 +175,8 @@ func (mock *DatasetAPICliMock) UpdateInstanceStatus(ctx context.Context, instanc
 
 // UpdateInstanceStatusCalls gets all the calls that were made to UpdateInstanceStatus.
 // Check the length with:
-//     len(mockedDatasetAPICli.UpdateInstanceStatusCalls())
+//
+//	len(mockedDatasetAPICli.UpdateInstanceStatusCalls())
 func (mock *DatasetAPICliMock) UpdateInstanceStatusCalls() []struct {
 	Ctx        context.Context
 	InstanceID string
@@ -196,28 +199,28 @@ var _ Cache = &CacheMock{}
 
 // CacheMock is a mock implementation of Cache.
 //
-// 	func TestSomethingThatUsesCache(t *testing.T) {
+//	func TestSomethingThatUsesCache(t *testing.T) {
 //
-// 		// make and configure a mocked Cache
-// 		mockedCache := &CacheMock{
-// 			DelFunc: func(key []byte) bool {
-// 				panic("mock out the Del method")
-// 			},
-// 			GetFunc: func(key []byte) ([]byte, error) {
-// 				panic("mock out the Get method")
-// 			},
-// 			SetFunc: func(key []byte, value []byte, expireSeconds int) error {
-// 				panic("mock out the Set method")
-// 			},
-// 			TTLFunc: func(key []byte) (uint32, error) {
-// 				panic("mock out the TTL method")
-// 			},
-// 		}
+//		// make and configure a mocked Cache
+//		mockedCache := &CacheMock{
+//			DelFunc: func(key []byte) bool {
+//				panic("mock out the Del method")
+//			},
+//			GetFunc: func(key []byte) ([]byte, error) {
+//				panic("mock out the Get method")
+//			},
+//			SetFunc: func(key []byte, value []byte, expireSeconds int) error {
+//				panic("mock out the Set method")
+//			},
+//			TTLFunc: func(key []byte) (uint32, error) {
+//				panic("mock out the TTL method")
+//			},
+//		}
 //
-// 		// use mockedCache in code that requires Cache
-// 		// and then make assertions.
+//		// use mockedCache in code that requires Cache
+//		// and then make assertions.
 //
-// 	}
+//	}
 type CacheMock struct {
 	// DelFunc mocks the Del method.
 	DelFunc func(key []byte) bool
@@ -282,7 +285,8 @@ func (mock *CacheMock) Del(key []byte) bool {
 
 // DelCalls gets all the calls that were made to Del.
 // Check the length with:
-//     len(mockedCache.DelCalls())
+//
+//	len(mockedCache.DelCalls())
 func (mock *CacheMock) DelCalls() []struct {
 	Key []byte
 } {
@@ -313,7 +317,8 @@ func (mock *CacheMock) Get(key []byte) ([]byte, error) {
 
 // GetCalls gets all the calls that were made to Get.
 // Check the length with:
-//     len(mockedCache.GetCalls())
+//
+//	len(mockedCache.GetCalls())
 func (mock *CacheMock) GetCalls() []struct {
 	Key []byte
 } {
@@ -348,7 +353,8 @@ func (mock *CacheMock) Set(key []byte, value []byte, expireSeconds int) error {
 
 // SetCalls gets all the calls that were made to Set.
 // Check the length with:
-//     len(mockedCache.SetCalls())
+//
+//	len(mockedCache.SetCalls())
 func (mock *CacheMock) SetCalls() []struct {
 	Key           []byte
 	Value         []byte
@@ -383,7 +389,8 @@ func (mock *CacheMock) TTL(key []byte) (uint32, error) {
 
 // TTLCalls gets all the calls that were made to TTL.
 // Check the length with:
-//     len(mockedCache.TTLCalls())
+//
+//	len(mockedCache.TTLCalls())
 func (mock *CacheMock) TTLCalls() []struct {
 	Key []byte
 } {
@@ -402,19 +409,19 @@ var _ EventHandler = &EventHandlerMock{}
 
 // EventHandlerMock is a mock implementation of EventHandler.
 //
-// 	func TestSomethingThatUsesEventHandler(t *testing.T) {
+//	func TestSomethingThatUsesEventHandler(t *testing.T) {
 //
-// 		// make and configure a mocked EventHandler
-// 		mockedEventHandler := &EventHandlerMock{
-// 			HandleEventFunc: func(ctx context.Context, e *model.ReportEvent) error {
-// 				panic("mock out the HandleEvent method")
-// 			},
-// 		}
+//		// make and configure a mocked EventHandler
+//		mockedEventHandler := &EventHandlerMock{
+//			HandleEventFunc: func(ctx context.Context, e *model.ReportEvent) error {
+//				panic("mock out the HandleEvent method")
+//			},
+//		}
 //
-// 		// use mockedEventHandler in code that requires EventHandler
-// 		// and then make assertions.
+//		// use mockedEventHandler in code that requires EventHandler
+//		// and then make assertions.
 //
-// 	}
+//	}
 type EventHandlerMock struct {
 	// HandleEventFunc mocks the HandleEvent method.
 	HandleEventFunc func(ctx context.Context, e *model.ReportEvent) error
@@ -452,7 +459,8 @@ func (mock *EventHandlerMock) HandleEvent(ctx context.Context, e *model.ReportEv
 
 // HandleEventCalls gets all the calls that were made to HandleEvent.
 // Check the length with:
-//     len(mockedEventHandler.HandleEventCalls())
+//
+//	len(mockedEventHandler.HandleEventCalls())
 func (mock *EventHandlerMock) HandleEventCalls() []struct {
 	Ctx context.Context
 	E   *model.ReportEvent

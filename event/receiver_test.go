@@ -6,7 +6,7 @@ import (
 
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
-	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
+	"github.com/ONSdigital/dp-kafka/v5/kafkatest"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -24,7 +24,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 		}
 
 		avro, _ := schema.ReportEventSchema.Marshal(e)
-		kafkaMsg := kafkatest.NewMessage(avro, 0)
+		kafkaMsg := kafkatest.NewMessage(avro)
 
 		handler := &EventHandlerMock{
 			HandleEventFunc: func(ctx context.Context, e *model.ReportEvent) error {
@@ -52,7 +52,7 @@ func TestReceiverProcessMessage(t *testing.T) {
 
 		Convey("When an invalid message is received", func() {
 
-			kafkaMsg := kafkatest.NewMessage([]byte("This is not a valid message"), 0)
+			kafkaMsg := kafkatest.NewMessage([]byte("This is not a valid message"))
 
 			err := receiver.ProcessMessage(ctx, kafkaMsg)
 

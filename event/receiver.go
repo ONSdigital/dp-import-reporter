@@ -5,7 +5,7 @@ import (
 
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
+	kafka "github.com/ONSdigital/dp-kafka/v5"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/pkg/errors"
 )

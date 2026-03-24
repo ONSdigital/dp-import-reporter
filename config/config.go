@@ -54,7 +54,7 @@ func Get() (*Config, error) {
 		ReportEventTopic:        "report-events",
 		ReportEventGroup:        "dp-import-reporter",
 		KafkaBrokers:            []string{"localhost:9092", "localhost:9093", "localhost:9094"},
-		KafkaVersion:            "1.0.2",
+		KafkaVersion:            "3.8.0",
 		KafkaOffsetOldest:       true,
 	}
 

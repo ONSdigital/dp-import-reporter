@@ -8,8 +8,8 @@ import (
 
 	"github.com/ONSdigital/dp-import-reporter/model"
 	"github.com/ONSdigital/dp-import-reporter/schema"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
+	kafka "github.com/ONSdigital/dp-kafka/v5"
+	"github.com/ONSdigital/dp-kafka/v5/kafkatest"
 	"github.com/ONSdigital/log.go/v2/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -93,11 +93,24 @@ func TestMessageConsumerListen(t *testing.T) {
 	})
 }
 
-func setUp(avroBytes []byte, handlerErr error) (*kafkatest.Message, *kafkatest.MessageConsumer, *ReceiverMock) {
+func setUp(avroBytes []byte, handlerErr error) (*kafkatest.MessageMock, kafka.IConsumerGroup, *ReceiverMock) {
+	kafkaMsg := kafkatest.NewMessage(avroBytes)
+	done := make(chan struct{})
+	kafkaMsg.UpstreamDoneFunc = func() chan struct{} { return done }
+	kafkaMsg.CommitAndReleaseFunc = func() {
+		close(done)
+	}
 
-	kafkaMsg := kafkatest.NewMessage(avroBytes, 0)
-
-	consumerMock := kafkatest.NewMessageConsumer(true)
+	channels := kafka.CreateConsumerGroupChannels(1, 1)
+	consumerMock := &kafkatest.IConsumerGroupMock{
+		ChannelsFunc: func() *kafka.ConsumerGroupChannels {
+			return channels
+		},
+		StopFunc: func() error { return nil },
+		CloseFunc: func(ctx context.Context, optFuncs ...kafka.OptFunc) error {
+			return nil
+		},
+	}
 
 	eventHandler := &ReceiverMock{
 		ProcessMessageFunc: func(ctx context.Context, event kafka.Message) error {

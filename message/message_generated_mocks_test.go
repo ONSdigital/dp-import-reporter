@@ -5,7 +5,7 @@ package message
 
 import (
 	"context"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
+	kafka "github.com/ONSdigital/dp-kafka/v5"
 	"sync"
 )
 
@@ -15,19 +15,19 @@ var _ Receiver = &ReceiverMock{}
 
 // ReceiverMock is a mock implementation of Receiver.
 //
-// 	func TestSomethingThatUsesReceiver(t *testing.T) {
+//	func TestSomethingThatUsesReceiver(t *testing.T) {
 //
-// 		// make and configure a mocked Receiver
-// 		mockedReceiver := &ReceiverMock{
-// 			ProcessMessageFunc: func(ctx context.Context, event kafka.Message) error {
-// 				panic("mock out the ProcessMessage method")
-// 			},
-// 		}
+//		// make and configure a mocked Receiver
+//		mockedReceiver := &ReceiverMock{
+//			ProcessMessageFunc: func(ctx context.Context, event kafka.Message) error {
+//				panic("mock out the ProcessMessage method")
+//			},
+//		}
 //
-// 		// use mockedReceiver in code that requires Receiver
-// 		// and then make assertions.
+//		// use mockedReceiver in code that requires Receiver
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ReceiverMock struct {
 	// ProcessMessageFunc mocks the ProcessMessage method.
 	ProcessMessageFunc func(ctx context.Context, event kafka.Message) error
@@ -65,7 +65,8 @@ func (mock *ReceiverMock) ProcessMessage(ctx context.Context, event kafka.Messag
 
 // ProcessMessageCalls gets all the calls that were made to ProcessMessage.
 // Check the length with:
-//     len(mockedReceiver.ProcessMessageCalls())
+//
+//	len(mockedReceiver.ProcessMessageCalls())
 func (mock *ReceiverMock) ProcessMessageCalls() []struct {
 	Ctx   context.Context
 	Event kafka.Message

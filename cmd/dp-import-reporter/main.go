@@ -16,7 +16,7 @@ import (
 	"github.com/ONSdigital/dp-import-reporter/event"
 	"github.com/ONSdigital/dp-import-reporter/message"
 	"github.com/ONSdigital/dp-import-reporter/server"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
+	kafka "github.com/ONSdigital/dp-kafka/v5"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/coocood/freecache"
 )
@@ -76,6 +76,9 @@ func main() {
 	cgConfig := &kafka.ConsumerGroupConfig{
 		Offset:       &kafkaOffset,
 		KafkaVersion: &cfg.KafkaVersion,
+		BrokerAddrs:  cfg.KafkaBrokers,
+		Topic:        cfg.ReportEventTopic,
+		GroupName:    cfg.ReportEventGroup,
 	}
 	if cfg.KafkaSecProtocol == config.KafkaSecProtocolTLS {
 		cgConfig.SecurityConfig = kafka.GetSecurityConfig(
@@ -86,15 +89,9 @@ func main() {
 		)
 	}
 
-	cgChannels := kafka.CreateConsumerGroupChannels(bufferSize)
-
 	// Create InstanceEvent kafka consumer - exit on channel validation error. Non-initialised consumers will not error at creation time.
 	kafkaConsumer, err := kafka.NewConsumerGroup(
 		ctx,
-		cfg.KafkaBrokers,
-		cfg.ReportEventTopic,
-		cfg.ReportEventGroup,
-		cgChannels,
 		cgConfig,
 	)
 	if err != nil {

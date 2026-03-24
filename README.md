@@ -17,7 +17,7 @@ Scripts for updating and debugging Kafka can be found [here](https://github.com/
 | ------------------------- | -------------------------------------| ------------------------------
 | BIND_ADDR                 | :22200                               | The port to bind the application healhcheck endpoint to
 | KAFKA_ADDR                | `localhost:9092`                     | The addresses of the kafka brokers (CSV)
-| KAFKA_VERSION             | `1.0.2`                              | The version of Kafka
+| KAFKA_VERSION             | `3.8.0`                              | The version of Kafka
 | KAFKA_SEC_PROTO           | _unset_                              | if set to `TLS`, kafka connections will use TLS ([ref-1])
 | KAFKA_SEC_CLIENT_KEY      | _unset_                              | PEM for the client key ([ref-1])
 | KAFKA_SEC_CLIENT_CERT     | _unset_                              | PEM for the client certificate ([ref-1])
